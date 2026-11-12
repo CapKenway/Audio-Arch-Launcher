@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E1E24" />
+      <stop offset="100%" stop-color="#0A0A0C" />
+    </linearGradient>
+    <linearGradient id="archGrad" x1="0%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#00838F" />
+      <stop offset="50%" stop-color="#00BCD4" />
+      <stop offset="100%" stop-color="#80DEEA" />
+    </linearGradient>
+    <linearGradient id="waveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF" />
+      <stop offset="100%" stop-color="#4CAF50" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Squircle -->
+  <rect x="16" y="16" width="480" height="480" rx="108" ry="108" fill="url(#bgGrad)" stroke="#2C2C34" stroke-width="6" />
+
+  <!-- Outer Sound Pulse Rings -->
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#00BCD4" stroke-width="3" stroke-dasharray="8 14" opacity="0.25" />
+  <circle cx="256" cy="256" r="165" fill="none" stroke="#4CAF50" stroke-width="2.5" stroke-dasharray="6 12" opacity="0.35" />
+
+  <!-- Arch Linux Swoosh Silhouette -->
+  <path d="M 256 95 L 135 375 L 182 375 C 205 320 225 295 256 250 C 287 295 307 320 329 375 L 377 375 Z" fill="url(#archGrad)" opacity="0.95" />
+  <!-- Arch cutout notch -->
+  <path d="M 256 200 C 235 250 205 315 168 375 L 210 375 C 230 340 245 315 256 295 C 267 315 282 340 302 375 L 344 375 C 307 315 277 250 256 200 Z" fill="#0A0A0C" opacity="0.8" />
+
+  <!-- Dynamic Audio Equalizer Waveform Bars -->
+  <g fill="url(#waveGrad)">
+    <rect x="156" y="270" width="14" height="60" rx="7" />
+    <rect x="186" y="240" width="14" height="120" rx="7" />
+    <rect x="216" y="210" width="14" height="180" rx="7" />
+    <rect x="249" y="175" width="14" height="250" rx="7" fill="#00E5FF" />
+    <rect x="282" y="210" width="14" height="180" rx="7" />
+    <rect x="312" y="240" width="14" height="120" rx="7" />
+    <rect x="342" y="270" width="14" height="60" rx="7" />
+  </g>
+</svg>
+

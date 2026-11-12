@@ -1,0 +1,44 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <!-- Background squircle -->
+    <path
+        android:fillColor="#1E1E24"
+        android:pathData="M124,16h264c59.6,0 108,48.4 108,108v264c0,59.6 -48.4,108 -108,108H124c-59.6,0 -108,-48.4 -108,-108V124c0,-59.6 48.4,-108 108,-108z"/>
+
+    <!-- Arch peak -->
+    <path
+        android:fillColor="#00BCD4"
+        android:pathData="M256,95L135,375h47c23,-55 43,-80 74,-125c31,45 51,70 73,125h48L256,95z"/>
+
+    <!-- Arch inner notch cutout -->
+    <path
+        android:fillColor="#0A0A0C"
+        android:pathData="M256,200c-21,50 -51,115 -88,175h42c20,-35 35,-60 46,-80c11,20 26,45 46,80h42C307,315 277,250 256,200z"/>
+
+    <!-- Dynamic Audio Equalizer Waveform Bars -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M156,277a7,7 0,0,1 14,0v46a7,7 0,0,1 -14,0z"/>
+    <path
+        android:fillColor="#00BCD4"
+        android:pathData="M186,247a7,7 0,0,1 14,0v106a7,7 0,0,1 -14,0z"/>
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M216,217a7,7 0,0,1 14,0v166a7,7 0,0,1 -14,0z"/>
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M249,182a7,7 0,0,1 14,0v236a7,7 0,0,1 -14,0z"/>
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M282,217a7,7 0,0,1 14,0v166a7,7 0,0,1 -14,0z"/>
+    <path
+        android:fillColor="#00BCD4"
+        android:pathData="M312,247a7,7 0,0,1 14,0v106a7,7 0,0,1 -14,0z"/>
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M342,277a7,7 0,0,1 14,0v46a7,7 0,0,1 -14,0z"/>
+</vector>

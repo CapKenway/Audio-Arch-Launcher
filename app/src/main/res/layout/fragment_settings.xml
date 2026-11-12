@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/screen_padding">
+
+        <!-- Daemon Configuration Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_daemon"
+            android:textSize="@dimen/text_subtitle"
+            android:textStyle="bold"
+            android:textColor="@color/colorPrimary"
+            android:textAllCaps="true"
+            android:letterSpacing="0.05"
+            android:layout_marginBottom="8dp" />
+
+        <!-- TCP Port -->
+        <LinearLayout
+            android:id="@+id/setting_port"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_port"
+                android:textSize="@dimen/text_subtitle"
+                android:textColor="@color/textPrimary" />
+            <TextView
+                android:id="@+id/setting_port_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="12345"
+                android:textSize="@dimen/text_body"
+                android:textColor="@color/textSecondary"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Sample Rate -->
+        <LinearLayout
+            android:id="@+id/setting_sample_rate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_sample_rate"
+                android:textSize="@dimen/text_subtitle"
+                android:textColor="@color/textPrimary" />
+            <TextView
+                android:id="@+id/setting_sample_rate_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="44100 Hz"
+                android:textSize="@dimen/text_body"
+                android:textColor="@color/textSecondary"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Audio Latency -->
+        <LinearLayout
+            android:id="@+id/setting_latency"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_latency"
+                android:textSize="@dimen/text_subtitle"
+                android:textColor="@color/textPrimary" />
+            <TextView
+                android:id="@+id/setting_latency_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="15 ms (Default)"
+                android:textSize="@dimen/text_body"
+                android:textColor="@color/textSecondary"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Audio Backend -->
+        <LinearLayout
+            android:id="@+id/setting_backend"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_backend"
+                android:textSize="@dimen/text_subtitle"
+                android:textColor="@color/textPrimary" />
+            <TextView
+                android:id="@+id/setting_backend_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_backend_auto"
+                android:textSize="@dimen/text_body"
+                android:textColor="@color/textSecondary"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Auto-start -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_autostart"
+                    android:textSize="@dimen/text_subtitle"
+                    android:textColor="@color/textPrimary" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_autostart_desc"
+                    android:textSize="@dimen/text_body"
+                    android:textColor="@color/textSecondary"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+            <Switch
+                android:id="@+id/switch_autostart"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/divider"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- About Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_about"
+            android:textSize="@dimen/text_subtitle"
+            android:textStyle="bold"
+            android:textColor="@color/colorPrimary"
+            android:textAllCaps="true"
+            android:letterSpacing="0.05"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/setting_about"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Audio Arch Launcher"
+                android:textSize="@dimen/text_subtitle"
+                android:textColor="@color/textPrimary" />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Version 1.1"
+                android:textSize="@dimen/text_body"
+                android:textColor="@color/textSecondary"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>
