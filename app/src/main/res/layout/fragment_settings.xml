@@ -194,9 +194,10 @@
                 android:textSize="@dimen/text_subtitle"
                 android:textColor="@color/textPrimary" />
             <TextView
+                android:id="@+id/setting_about_version"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Version 1.1"
+                android:text="Version 1.5"
                 android:textSize="@dimen/text_body"
                 android:textColor="@color/textSecondary"
                 android:layout_marginTop="2dp" />

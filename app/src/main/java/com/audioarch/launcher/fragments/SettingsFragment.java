@@ -156,12 +156,18 @@ public class SettingsFragment extends Fragment {
             });
         }
 
-        // About
+        // About Section version setup
+        TextView settingAboutVersion = view.findViewById(R.id.setting_about_version);
+        if (settingAboutVersion != null) {
+            settingAboutVersion.setText("v" + com.audioarch.launcher.BuildConfig.VERSION_NAME);
+        }
+
         view.findViewById(R.id.setting_about).setOnClickListener(v -> {
             Context c = getContext();
             if (c != null) {
                 Toast.makeText(c,
-                        "Audio Arch Launcher v1.5\nUltra-low latency USB audio for Android",
+                        "Audio Arch Launcher v" + com.audioarch.launcher.BuildConfig.VERSION_NAME +
+                                "\nUltra-low latency USB audio for Android",
                         Toast.LENGTH_LONG).show();
             }
         });
