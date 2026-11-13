@@ -2,6 +2,7 @@
 
 [![Platform: Android](https://img.shields.io/badge/Platform-Android%204.0%2B%20(ICS%20--%2014%2B)-green.svg)](https://developer.android.com)
 [![Host: Linux](https://img.shields.io/badge/Host-Linux%20(Arch%20%2F%20Debian%20%2F%20Fedora)-blue.svg)](https://kernel.org)
+[![Companion: Audio-Arch](https://img.shields.io/badge/Companion-Audio--Arch-7952b3.svg)](https://github.com/CapKenway/Audio-Arch)
 [![Audio: Bit-Perfect DAC](https://img.shields.io/badge/Audio-ALSA%20%7C%20AudioTrack%20(Zero--Jitter)-orange.svg)]()
 [![Hardware Telemetry: Realtime](https://img.shields.io/badge/Telemetry-CPU%20%7C%20GPU%20%7C%20RAM%20%7C%20NET%20%7C%20FPS-cyan.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -146,7 +147,16 @@ python3 stat_sender.py set-fps "Elden Ring" 120
 echo "Elden Ring|120" > /dev/shm/game_fps
 ```
 
-### 3. Service Management
+### 3. Audio Streaming Setup (Companion: [Audio-Arch](https://github.com/CapKenway/Audio-Arch))
+To stream bit-perfect low-latency audio from your Linux PC to the phone via USB (PipeWire / ALSA), clone and run the companion project:
+```bash
+git clone https://github.com/CapKenway/Audio-Arch.git
+cd Audio-Arch
+./audio_arch.sh
+```
+*(No binary release required — simply clone the repository and run).*
+
+### 4. Service Management
 ```bash
 python3 stat_sender.py stop
 python3 stat_sender.py start
