@@ -126,6 +126,32 @@
                 android:layout_marginTop="2dp" />
         </LinearLayout>
 
+        <!-- Screen Orientation -->
+        <LinearLayout
+            android:id="@+id/setting_orientation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_orientation"
+                android:textSize="@dimen/text_subtitle"
+                android:textColor="@color/textPrimary" />
+            <TextView
+                android:id="@+id/setting_orientation_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/orientation_portrait"
+                android:textSize="@dimen/text_body"
+                android:textColor="@color/textSecondary"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
         <!-- Auto-start -->
         <LinearLayout
             android:layout_width="match_parent"

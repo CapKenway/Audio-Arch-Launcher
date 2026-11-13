@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/nav_stats"
+        android:icon="@drawable/ic_stats"
+        android:title="@string/tab_stats" />
+    <item
         android:id="@+id/nav_dashboard"
         android:icon="@drawable/ic_dashboard"
-        android:title="@string/tab_dashboard" />
+        android:title="@string/tab_audio" />
     <item
         android:id="@+id/nav_music"
         android:icon="@drawable/ic_music"

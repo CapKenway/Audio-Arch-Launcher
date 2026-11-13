@@ -22,7 +22,7 @@
             android:name=".LauncherActivity"
             android:launchMode="singleTask"
             android:stateNotNeeded="true"
-            android:screenOrientation="portrait"
+            android:screenOrientation="unspecified"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

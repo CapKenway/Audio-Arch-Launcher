@@ -25,7 +25,7 @@ import java.io.FileWriter;
 public class SettingsFragment extends Fragment {
 
     private SharedPreferences prefs;
-    private TextView portValue, sampleRateValue, latencyValue, backendValue;
+    private TextView portValue, sampleRateValue, latencyValue, backendValue, orientationValue;
     private Switch switchAutostart;
 
     @Nullable
@@ -47,6 +47,7 @@ public class SettingsFragment extends Fragment {
         sampleRateValue = view.findViewById(R.id.setting_sample_rate_value);
         latencyValue = view.findViewById(R.id.setting_latency_value);
         backendValue = view.findViewById(R.id.setting_backend_value);
+        orientationValue = view.findViewById(R.id.setting_orientation_value);
         switchAutostart = view.findViewById(R.id.switch_autostart);
 
         refreshValues();
@@ -148,6 +149,39 @@ public class SettingsFragment extends Fragment {
                     .show();
         });
 
+        // Screen Orientation setting
+        view.findViewById(R.id.setting_orientation).setOnClickListener(v -> {
+            Context c = getContext();
+            if (c == null || prefs == null) return;
+
+            String[] options = {
+                    c.getString(R.string.orientation_portrait),
+                    c.getString(R.string.orientation_landscape),
+                    c.getString(R.string.orientation_reverse_landscape),
+                    c.getString(R.string.orientation_auto)
+            };
+            String[] keys = {"portrait", "landscape", "reverse_landscape", "auto"};
+            String current = prefs.getString("orientation", "portrait");
+            int selected = 0;
+            for (int i = 0; i < keys.length; i++) {
+                if (keys[i].equals(current)) { selected = i; break; }
+            }
+
+            new AlertDialog.Builder(c)
+                    .setTitle(R.string.settings_orientation)
+                    .setSingleChoiceItems(options, selected, (dialog, which) -> {
+                        String chosen = keys[which];
+                        prefs.edit().putString("orientation", chosen).apply();
+                        if (getActivity() instanceof com.audioarch.launcher.LauncherActivity) {
+                            ((com.audioarch.launcher.LauncherActivity) getActivity()).applyOrientation(chosen);
+                        }
+                        refreshValues();
+                        dialog.dismiss();
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+
         // Auto-start toggle
         if (switchAutostart != null && prefs != null) {
             switchAutostart.setChecked(prefs.getBoolean("autostart", false));
@@ -220,6 +254,24 @@ public class SettingsFragment extends Fragment {
                     break;
                 default:
                     backendValue.setText(R.string.settings_backend_auto);
+                    break;
+            }
+        }
+
+        if (orientationValue != null) {
+            String orient = prefs.getString("orientation", "portrait");
+            switch (orient) {
+                case "landscape":
+                    orientationValue.setText(R.string.orientation_landscape);
+                    break;
+                case "reverse_landscape":
+                    orientationValue.setText(R.string.orientation_reverse_landscape);
+                    break;
+                case "auto":
+                    orientationValue.setText(R.string.orientation_auto);
+                    break;
+                default:
+                    orientationValue.setText(R.string.orientation_portrait);
                     break;
             }
         }

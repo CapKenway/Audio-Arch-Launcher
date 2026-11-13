@@ -22,6 +22,8 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -32,8 +34,10 @@ import androidx.fragment.app.FragmentPagerAdapter;
 import com.audioarch.launcher.fragments.DashboardFragment;
 import com.audioarch.launcher.fragments.MusicFragment;
 import com.audioarch.launcher.fragments.SettingsFragment;
+import com.audioarch.launcher.fragments.StatsFragment;
 import com.audioarch.launcher.models.Song;
 import com.audioarch.launcher.services.MusicPlayerService;
+import com.audioarch.launcher.utils.PcStatsServer;
 import com.audioarch.launcher.views.NonSwipeableViewPager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
@@ -99,6 +103,13 @@ public class LauncherActivity extends AppCompatActivity {
         );
         applyImmersiveFullscreen();
 
+        // Apply saved screen orientation setting
+        SharedPreferences prefs = getSharedPreferences("audioarch_prefs", Context.MODE_PRIVATE);
+        applyOrientation(prefs.getString("orientation", "portrait"));
+
+        // Ensure PC stats server is running
+        PcStatsServer.getInstance().start(PcStatsServer.DEFAULT_PORT);
+
         setContentView(R.layout.activity_launcher);
 
         viewPager = findViewById(R.id.view_pager);
@@ -118,27 +129,34 @@ public class LauncherActivity extends AppCompatActivity {
         npTitle = nowPlayingBar.findViewById(R.id.np_title);
         npArtist = nowPlayingBar.findViewById(R.id.np_artist);
 
-        // Setup ViewPager
+        // Setup ViewPager with 4 tabs (Stats primary, Audio, Music, Settings)
         SectionsPagerAdapter pagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager());
         viewPager.setAdapter(pagerAdapter);
-        viewPager.setOffscreenPageLimit(2);
+        viewPager.setOffscreenPageLimit(3);
 
         // Sync bottom nav with ViewPager
         bottomNav.setOnNavigationItemSelectedListener(item -> {
             resetAutoHideTimer();
             int id = item.getItemId();
-            if (id == R.id.nav_dashboard) {
+            if (id == R.id.nav_stats) {
                 viewPager.setCurrentItem(0, false);
                 return true;
-            } else if (id == R.id.nav_music) {
+            } else if (id == R.id.nav_dashboard) {
                 viewPager.setCurrentItem(1, false);
                 return true;
-            } else if (id == R.id.nav_settings) {
+            } else if (id == R.id.nav_music) {
                 viewPager.setCurrentItem(2, false);
+                return true;
+            } else if (id == R.id.nav_settings) {
+                viewPager.setCurrentItem(3, false);
                 return true;
             }
             return false;
         });
+
+        // Make Stat page primary upon launch
+        viewPager.setCurrentItem(0, false);
+        bottomNav.setSelectedItemId(R.id.nav_stats);
 
         // Tapping active tab acts as hidden shortcut to hide the bottom nav bar
         bottomNav.setOnNavigationItemReselectedListener(item -> {
@@ -314,6 +332,9 @@ public class LauncherActivity extends AppCompatActivity {
             } catch (Throwable ignored) {}
             serviceBound = false;
         }
+        if (isFinishing()) {
+            PcStatsServer.getInstance().stop();
+        }
         super.onDestroy();
     }
 
@@ -329,6 +350,25 @@ public class LauncherActivity extends AppCompatActivity {
 
     public boolean isBottomNavVisible() {
         return isBottomBarVisible;
+    }
+
+    public void switchToAudioTab() {
+        if (viewPager != null && bottomNav != null) {
+            viewPager.setCurrentItem(1, false);
+            bottomNav.setSelectedItemId(R.id.nav_dashboard);
+        }
+    }
+
+    public void applyOrientation(String orientation) {
+        if ("landscape".equalsIgnoreCase(orientation)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        } else if ("reverse_landscape".equalsIgnoreCase(orientation)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
+        } else if ("auto".equalsIgnoreCase(orientation)) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
+        } else {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        }
     }
 
     public MusicPlayerService getMusicService() {
@@ -410,16 +450,17 @@ public class LauncherActivity extends AppCompatActivity {
         @Override
         public Fragment getItem(int position) {
             switch (position) {
-                case 0: return new DashboardFragment();
-                case 1: return new MusicFragment();
-                case 2: return new SettingsFragment();
-                default: return new DashboardFragment();
+                case 0: return new StatsFragment();
+                case 1: return new DashboardFragment();
+                case 2: return new MusicFragment();
+                case 3: return new SettingsFragment();
+                default: return new StatsFragment();
             }
         }
 
         @Override
         public int getCount() {
-            return 3;
+            return 4;
         }
     }
 }

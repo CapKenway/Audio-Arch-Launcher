@@ -1,0 +1,585 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background"
+    android:paddingLeft="8dp"
+    android:paddingRight="8dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <!-- Top Compact Landscape Header Bar -->
+    <LinearLayout
+        android:id="@+id/header_bar"
+        android:layout_width="match_parent"
+        android:layout_height="24dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="3dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PC STATS DASHBOARD"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/colorPrimary"
+            android:letterSpacing="0.08" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- PC Connection Status Indicator -->
+        <LinearLayout
+            android:id="@+id/container_pc_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginEnd="8dp">
+
+            <View
+                android:id="@+id/dot_pc_status"
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:background="@drawable/bg_status_stopped" />
+
+            <TextView
+                android:id="@+id/tv_pc_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/stat_waiting_pc"
+                android:textSize="10sp"
+                android:textColor="@color/textSecondary"
+                android:layout_marginStart="4dp" />
+        </LinearLayout>
+
+        <!-- Top Right Daemon Pill with Version (From Phone Itself) -->
+        <LinearLayout
+            android:id="@+id/pill_daemon_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_daemon_pill"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:clickable="true"
+            android:focusable="true">
+
+            <View
+                android:id="@+id/dot_daemon_pill"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:background="@drawable/bg_status_stopped"
+                android:layout_marginEnd="4dp" />
+
+            <TextView
+                android:id="@+id/tv_daemon_pill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Daemon: Off"
+                android:textColor="@color/colorAccent"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Main Landscape Body: 2 Columns Side-by-Side -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
+
+        <!-- Left Column: CPU (top) & GPU (bottom) -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginEnd="3dp">
+
+            <!-- Card 1: CPU & Cores -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_cpu"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1.15"
+                android:layout_marginBottom="3dp"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center_vertical"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stat_cpu"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/colorPrimary" />
+
+                        <!-- Dedicated CPU Temperature -->
+                        <TextView
+                            android:id="@+id/tv_cpu_temp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--\u00B0C"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFD54F"
+                            android:layout_marginStart="6dp" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:id="@+id/tv_cpu_pct"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0%"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/colorPrimary" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_cpu_detail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="CPU Loading\u2026"
+                        android:textSize="10sp"
+                        android:textColor="@color/textSecondary"
+                        android:layout_marginTop="1dp"
+                        android:singleLine="true"
+                        android:ellipsize="end" />
+
+                    <!-- Fallback Overall CPU Bar -->
+                    <ProgressBar
+                        android:id="@+id/pb_cpu"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:layout_marginTop="1dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressDrawable="@drawable/bg_progress_cpu"
+                        android:visibility="gone" />
+
+                    <!-- Per-Core Bars Container (3 Columns) -->
+                    <LinearLayout
+                        android:id="@+id/container_cpu_cores"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="1dp" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Card 3: GPU (Core & VRAM) -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_gpu"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1.15"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center_vertical"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp">
+
+                    <!-- Core Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stat_gpu"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="#FF9800" />
+
+                        <!-- Dedicated GPU Temperature -->
+                        <TextView
+                            android:id="@+id/tv_gpu_temp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="--\u00B0C"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFD54F"
+                            android:layout_marginStart="6dp" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:id="@+id/tv_gpu_pct"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Core: 0%"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="#FF9800" />
+                    </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/pb_gpu"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:layout_marginTop="1dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressDrawable="@drawable/bg_progress_gpu" />
+
+                    <!-- VRAM Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="2dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stat_vram"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFA726" />
+
+                        <TextView
+                            android:id="@+id/tv_vram_detail"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="0.0 / 0.0 GB"
+                            android:textSize="10sp"
+                            android:textColor="@color/textSecondary"
+                            android:layout_marginStart="4dp"
+                            android:singleLine="true"
+                            android:ellipsize="end" />
+
+                        <TextView
+                            android:id="@+id/tv_vram_pct"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0%"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFA726" />
+                    </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/pb_vram"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="3dp"
+                        android:layout_marginTop="1dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressDrawable="@drawable/bg_progress_vram" />
+
+                    <TextView
+                        android:id="@+id/tv_gpu_detail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="GPU Loading\u2026"
+                        android:textSize="9.5sp"
+                        android:textColor="@color/textHint"
+                        android:layout_marginTop="1dp"
+                        android:singleLine="true"
+                        android:ellipsize="end" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+        </LinearLayout>
+
+        <!-- Right Column: RAM & DISK (top) & NETWORK (bottom) -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="3dp">
+
+            <!-- Card 2: RAM & DISK -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_ram"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1.15"
+                android:layout_marginBottom="3dp"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center_vertical"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp">
+
+                    <!-- RAM Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stat_ram"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/colorAccent" />
+
+                        <TextView
+                            android:id="@+id/tv_ram_detail"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="0.0 / 0.0 GB"
+                            android:textSize="10sp"
+                            android:textColor="@color/textSecondary"
+                            android:layout_marginStart="4dp"
+                            android:singleLine="true"
+                            android:ellipsize="end" />
+
+                        <TextView
+                            android:id="@+id/tv_ram_pct"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0%"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/colorAccent" />
+                    </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/pb_ram"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="4dp"
+                        android:layout_marginTop="1dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressDrawable="@drawable/bg_progress_ram" />
+
+                    <!-- DISK Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="2dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stat_disk"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#26A69A" />
+
+                        <TextView
+                            android:id="@+id/tv_disk_detail"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Root: 0.0 / 0.0 GB"
+                            android:textSize="9.5sp"
+                            android:textColor="@color/textSecondary"
+                            android:layout_marginStart="4dp"
+                            android:singleLine="true"
+                            android:ellipsize="end" />
+
+                        <TextView
+                            android:id="@+id/tv_disk_pct"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0%"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:textColor="#26A69A" />
+                    </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/pb_disk"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="3dp"
+                        android:layout_marginTop="1dp"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressDrawable="@drawable/bg_progress_disk" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Card 4: Network Speed & IP/MAC -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_net"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1.15"
+                app:cardBackgroundColor="@color/surface"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center_vertical"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stat_net"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:textColor="#29B6F6" />
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <TextView
+                            android:id="@+id/tv_net_speed_summary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="\u2193 0 KB/s  \u2191 0 KB/s"
+                            android:textSize="10.5sp"
+                            android:textStyle="bold"
+                            android:textColor="#29B6F6" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="2dp">
+
+                        <!-- Download Column -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginEnd="4dp">
+
+                            <TextView
+                                android:id="@+id/tv_net_down"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="\u2193 0 KB/s"
+                                android:textSize="9sp"
+                                android:textColor="#29B6F6"
+                                android:singleLine="true" />
+
+                            <ProgressBar
+                                android:id="@+id/pb_net_down"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="3dp"
+                                android:layout_marginTop="1dp"
+                                android:max="100"
+                                android:progress="0"
+                                android:progressDrawable="@drawable/bg_progress_net_down" />
+                        </LinearLayout>
+
+                        <!-- Upload Column -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="4dp">
+
+                            <TextView
+                                android:id="@+id/tv_net_up"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="\u2191 0 KB/s"
+                                android:textSize="9sp"
+                                android:textColor="#AB47BC"
+                                android:singleLine="true" />
+
+                            <ProgressBar
+                                android:id="@+id/pb_net_up"
+                                style="?android:attr/progressBarStyleHorizontal"
+                                android:layout_width="match_parent"
+                                android:layout_height="3dp"
+                                android:layout_marginTop="1dp"
+                                android:max="100"
+                                android:progress="0"
+                                android:progressDrawable="@drawable/bg_progress_net_up" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- IP and MAC Address Row -->
+                    <TextView
+                        android:id="@+id/tv_net_ip_mac"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="IP: --  \u2022  MAC: --"
+                        android:textSize="9sp"
+                        android:textColor="@color/textHint"
+                        android:layout_marginTop="2dp"
+                        android:singleLine="true"
+                        android:ellipsize="end" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
