@@ -39,6 +39,64 @@ A specialized Android launcher that breathes new life into legacy and modern And
 
 ---
 
+## 📦 Releases & Downloads
+
+You do **not** need to build from source or install Android Studio to use Audio Arch Launcher! Ready-to-install packages are published under **[GitHub Releases](https://github.com/CapKenway/Audio-Arch-Launcher/releases)**:
+
+| Asset | Platform | Description |
+|---|---|---|
+| **`AudioArchLauncher-v1.5.apk`** | Android 4.0+ (API 14 -- 14+) | Pre-compiled Android application. Ultra-lightweight (~2 MB), battery-friendly, zero bloat. |
+| **`stat_sender.py`** | Linux (Host PC) | Python 3 telemetry daemon. Requires no heavy dependencies; reads directly from Linux `/proc` and `sysfs`. |
+
+### Quick Install:
+```bash
+# 1. Install APK on your Android device (via ADB or copy to phone storage):
+adb install -r AudioArchLauncher-v1.5.apk
+
+# 2. Run the telemetry daemon on your Linux PC:
+python3 stat_sender.py install
+```
+
+---
+
+## 🔗 Ecosystem & Companion Project — [Audio-Arch](https://github.com/CapKenway/Audio-Arch)
+
+**Audio Arch Launcher** works in tandem with **[Audio-Arch](https://github.com/CapKenway/Audio-Arch)**, the host-side Linux audio streaming engine:
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                             LINUX HOST PC                                 │
+│                                                                           │
+│   [Audio-Arch] (Companion Repo)           [stat_sender.py] (This Repo)   │
+│   PipeWire / ALSA Audio Streamer          Hardware Telemetry Daemon       │
+│   • Captures PC system audio              • Reads CPU, GPU, RAM, VRAM     │
+│   • Streams bit-perfect PCM over USB      • Detects Network & Gaming FPS  │
+└─────────────────────┬───────────────────────────────────┬─────────────────┘
+                      │ USB Cable (ADB Tunnel)            │ tcp:12347
+                      ▼                                   ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    ANDROID PHONE (Audio Arch Launcher)                    │
+│                                                                           │
+│   • DAC / Audio Receiver: Native ALSA (3.5mm jack) & AudioTrack (BT)      │
+│   • Telemetry Dashboard: Real-time 2x2 non-scrolling PC hardware HUD      │
+│   • Appliance Launcher: Custom home screen replacement (API 14 to 14+)    │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why does Audio-Arch have no release binaries?
+> [!NOTE]
+> The companion project **[Audio-Arch](https://github.com/CapKenway/Audio-Arch)** is a pure, portable shell script and native streaming harness (`audio_arch.sh`). It does **not** have or need pre-built GitHub releases.
+>
+> You simply clone the repository and run it directly:
+> ```bash
+> git clone https://github.com/CapKenway/Audio-Arch.git
+> cd Audio-Arch
+> ./audio_arch.sh
+> ```
+> `audio_arch.sh` automatically detects your Linux audio server (PipeWire, PulseAudio, or raw ALSA), sets up the ADB reverse audio tunnel, and pairs with the launcher on your phone.
+
+---
+
 ## 🏗️ Architecture
 
 ```
@@ -113,16 +171,18 @@ STAT|cpu_pct|cpu_temp|cpu_model|ram_used_gb|ram_total_gb|ram_pct|gpu_pct|gpu_tem
 
 ## 🚀 Getting Started
 
-### 1. Build and Install the Android App
-From this repository:
-```bash
-# Build the APK:
-./gradlew assembleDebug
-
-# Install via ADB to your device:
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-*Tip: On the phone, press **Home** and set **Audio Arch** as "Always" to use it as your dedicated launcher.*
+### 1. Install the Android App
+- **Option A: Pre-built APK (Recommended)**
+  Download `AudioArchLauncher-v1.5.apk` directly from [GitHub Releases](https://github.com/CapKenway/Audio-Arch-Launcher/releases):
+  ```bash
+  adb install -r AudioArchLauncher-v1.5.apk
+  ```
+- **Option B: Build from Source with Gradle**
+  ```bash
+  ./gradlew assembleDebug
+  adb install -r app/build/outputs/apk/debug/app-debug.apk
+  ```
+*Tip: On the phone, press the physical **Home** button and choose **Audio Arch** as "Always" to run it as your dedicated home dashboard.*
 
 ### 2. Configure Host Telemetry (`stat_sender.py`)
 The included Python script handles sensor collection and installs as an unprivileged systemd user service:
