@@ -26,6 +26,7 @@ import com.audioarch.launcher.models.DaemonStatus;
 import com.audioarch.launcher.models.PcStats;
 import com.audioarch.launcher.utils.DaemonController;
 import com.audioarch.launcher.utils.PcStatsServer;
+import com.audioarch.launcher.views.FpsGraphView;
 
 import java.lang.ref.WeakReference;
 import java.util.Locale;
@@ -55,8 +56,12 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
     private ProgressBar pbVram;
 
     // Network Card
-    private TextView tvNetSpeedSummary, tvNetDown, tvNetUp, tvNetIpMac;
-    private ProgressBar pbNetDown, pbNetUp;
+    private TextView tvNetSpeedSummary, tvNetIp, tvNetLink;
+
+    // Game & FPS Dynamic Slot
+    private View dividerNetGame, containerGame;
+    private TextView tvGameName, tvGameFps;
+    private FpsGraphView viewFpsGraph;
 
     private DaemonController daemonController;
     private SharedPreferences prefs;
@@ -78,16 +83,15 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
     private String cachedVramPct = "";
     private String cachedVramDetail = "";
     private String cachedNetSummary = "";
-    private String cachedNetDown = "";
-    private String cachedNetUp = "";
-    private String cachedNetIpMac = "";
+    private String cachedNetIp = "";
+    private String cachedNetLink = "";
+    private String cachedGameName = "";
+    private String cachedGameFps = "";
     private int cachedCpuProgress = -1;
     private int cachedRamProgress = -1;
     private int cachedDiskProgress = -1;
     private int cachedGpuProgress = -1;
     private int cachedVramProgress = -1;
-    private int cachedNetDownProgress = -1;
-    private int cachedNetUpProgress = -1;
 
     @Nullable
     @Override
@@ -131,11 +135,15 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
 
         // Network views
         tvNetSpeedSummary = view.findViewById(R.id.tv_net_speed_summary);
-        tvNetDown = view.findViewById(R.id.tv_net_down);
-        tvNetUp = view.findViewById(R.id.tv_net_up);
-        pbNetDown = view.findViewById(R.id.pb_net_down);
-        pbNetUp = view.findViewById(R.id.pb_net_up);
-        tvNetIpMac = view.findViewById(R.id.tv_net_ip_mac);
+        tvNetIp = view.findViewById(R.id.tv_net_ip);
+        tvNetLink = view.findViewById(R.id.tv_net_link);
+
+        // Game dynamic views
+        dividerNetGame = view.findViewById(R.id.divider_net_game);
+        containerGame = view.findViewById(R.id.container_game);
+        tvGameName = view.findViewById(R.id.tv_game_name);
+        tvGameFps = view.findViewById(R.id.tv_game_fps);
+        viewFpsGraph = view.findViewById(R.id.view_fps_graph);
 
         headerBar = view.findViewById(R.id.header_bar);
         if (headerBar != null) {
@@ -192,6 +200,9 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
     public void onDestroyView() {
         pbCores = null;
         cachedCoreProgress = null;
+        viewFpsGraph = null;
+        dividerNetGame = null;
+        containerGame = null;
         super.onDestroyView();
     }
 
@@ -447,51 +458,73 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
             tvGpuDetail.setText(gpuModel);
         }
 
-        // 4. Network Speed & IP / MAC (Bottom Right)
+        // 4. Network Speed & IP / Link Info (Bottom Right)
         float downKb = stats.getNetDownKbps();
         float upKb = stats.getNetUpKbps();
-        String downStr = "\u2193 " + PcStats.formatSpeed(downKb);
-        String upStr = "\u2191 " + PcStats.formatSpeed(upKb);
-        String summaryStr = downStr + "  " + upStr;
+        String summaryStr = "\u2193 " + PcStats.formatSpeed(downKb) + "   \u2191 " + PcStats.formatSpeed(upKb);
 
         if (!summaryStr.equals(cachedNetSummary) && tvNetSpeedSummary != null) {
             cachedNetSummary = summaryStr;
             tvNetSpeedSummary.setText(summaryStr);
         }
-        if (!downStr.equals(cachedNetDown) && tvNetDown != null) {
-            cachedNetDown = downStr;
-            tvNetDown.setText(downStr);
-        }
-        if (!upStr.equals(cachedNetUp) && tvNetUp != null) {
-            cachedNetUp = upStr;
-            tvNetUp.setText(upStr);
-        }
 
-        // Scale progress bar smoothly (0 - 50MB/s range)
-        int downProgress = Math.min(100, (int) ((downKb / 51200f) * 100f));
-        int upProgress = Math.min(100, (int) ((upKb / 10240f) * 100f));
-        if (downProgress != cachedNetDownProgress && pbNetDown != null) {
-            cachedNetDownProgress = downProgress;
-            pbNetDown.setProgress(downProgress);
-        }
-        if (upProgress != cachedNetUpProgress && pbNetUp != null) {
-            cachedNetUpProgress = upProgress;
-            pbNetUp.setProgress(upProgress);
-        }
-
-        // Network IP and MAC Address
-        if (tvNetIpMac != null) {
+        // Dedicated Line 2: IP Address
+        if (tvNetIp != null) {
             String ip = stats.getNetIp();
-            String mac = stats.getNetMac();
-            String ipMacStr;
-            if (ip != null && !ip.isEmpty()) {
-                ipMacStr = "IP: " + ip + "  \u2022  MAC: " + (mac != null && !mac.isEmpty() ? mac : "--");
-            } else {
-                ipMacStr = "IP: --  \u2022  MAC: --";
+            String ipStr = (ip != null && !ip.isEmpty()) ? ("IP: " + ip) : "IP: --";
+            if (!ipStr.equals(cachedNetIp)) {
+                cachedNetIp = ipStr;
+                tvNetIp.setText(ipStr);
             }
-            if (!ipMacStr.equals(cachedNetIpMac)) {
-                cachedNetIpMac = ipMacStr;
-                tvNetIpMac.setText(ipMacStr);
+        }
+
+        // Dedicated Line 3: Network Name & Link Speed
+        if (tvNetLink != null) {
+            String link = stats.getNetLink();
+            String linkStr = (link != null && !link.isEmpty()) ? ("Link: " + link) : "Link: --";
+            if (!linkStr.equals(cachedNetLink)) {
+                cachedNetLink = linkStr;
+                tvNetLink.setText(linkStr);
+            }
+        }
+
+        // 5. Dynamic Game Slot (Visible ONLY when a game is running)
+        boolean hasGame = stats.isGameRunning();
+        if (hasGame) {
+            if (dividerNetGame != null && dividerNetGame.getVisibility() != View.VISIBLE) {
+                dividerNetGame.setVisibility(View.VISIBLE);
+            }
+            if (containerGame != null && containerGame.getVisibility() != View.VISIBLE) {
+                containerGame.setVisibility(View.VISIBLE);
+            }
+
+            String gameName = stats.getGameName();
+            if (!gameName.equals(cachedGameName) && tvGameName != null) {
+                cachedGameName = gameName;
+                tvGameName.setText(gameName);
+            }
+
+            int fps = stats.getGameFps();
+            String fpsStr = fps > 0 ? (fps + " FPS") : "-- FPS";
+            if (!fpsStr.equals(cachedGameFps) && tvGameFps != null) {
+                cachedGameFps = fpsStr;
+                tvGameFps.setText(fpsStr);
+            }
+
+            if (viewFpsGraph != null) {
+                viewFpsGraph.addFps(fps);
+            }
+        } else {
+            if (dividerNetGame != null && dividerNetGame.getVisibility() != View.GONE) {
+                dividerNetGame.setVisibility(View.GONE);
+            }
+            if (containerGame != null && containerGame.getVisibility() != View.GONE) {
+                containerGame.setVisibility(View.GONE);
+            }
+            cachedGameName = "";
+            cachedGameFps = "";
+            if (viewFpsGraph != null) {
+                viewFpsGraph.clear();
             }
         }
     }

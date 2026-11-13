@@ -22,9 +22,12 @@ public class PcStats {
     private float netUpKbps;
     private String netIp;
     private String netMac;
+    private String netLink;
     private float diskUsedGb;
     private float diskTotalGb;
     private int diskPct;
+    private String gameName;
+    private int gameFps;
     private long timestamp;
 
     public PcStats() {
@@ -45,15 +48,18 @@ public class PcStats {
         this.netUpKbps = 0f;
         this.netIp = "";
         this.netMac = "";
+        this.netLink = "";
         this.diskUsedGb = 0f;
         this.diskTotalGb = 0f;
         this.diskPct = 0;
+        this.gameName = "No Game";
+        this.gameFps = 0;
         this.timestamp = System.currentTimeMillis();
     }
 
     /**
      * Fast parser for delimited format:
-     * STAT|cpu_pct|cpu_temp|cpu_model|ram_used_gb|ram_total_gb|ram_pct|gpu_pct|gpu_temp|vram_used_gb|vram_total_gb|vram_pct|gpu_name|net_down_kb|net_up_kb|ip|mac|disk_used_gb|disk_total_gb|disk_pct|cores_str
+     * STAT|cpu_pct|cpu_temp|cpu_model|ram_used_gb|ram_total_gb|ram_pct|gpu_pct|gpu_temp|vram_used_gb|vram_total_gb|vram_pct|gpu_name|net_down_kb|net_up_kb|ip|mac|disk_used_gb|disk_total_gb|disk_pct|cores_str|game_name|game_fps
      */
     public static PcStats parseDelimited(String line) {
         if (line == null || !line.startsWith("STAT|")) return null;
@@ -76,7 +82,10 @@ public class PcStats {
             if (parts.length > 13) s.netDownKbps = parseFloat(parts[13], 0f);
             if (parts.length > 14) s.netUpKbps = parseFloat(parts[14], 0f);
             if (parts.length > 15) s.netIp = parts[15].trim();
-            if (parts.length > 16) s.netMac = parts[16].trim().toUpperCase(Locale.US);
+            if (parts.length > 16) {
+                s.netLink = parts[16].trim();
+                s.netMac = s.netLink;
+            }
             if (parts.length > 17) s.diskUsedGb = parseFloat(parts[17], 0f);
             if (parts.length > 18) s.diskTotalGb = parseFloat(parts[18], 0f);
             if (parts.length > 19) s.diskPct = clampPct(parseInt(parts[19], 0));
@@ -86,6 +95,13 @@ public class PcStats {
                 for (int i = 0; i < coreStrs.length; i++) {
                     s.cpuCorePcts[i] = clampPct(parseInt(coreStrs[i], 0));
                 }
+            }
+            if (parts.length > 21) {
+                String g = parts[21].trim();
+                s.gameName = g.isEmpty() ? "No Game" : g;
+            }
+            if (parts.length > 22) {
+                s.gameFps = parseInt(parts[22], 0);
             }
             s.timestamp = System.currentTimeMillis();
             return s;
@@ -114,7 +130,8 @@ public class PcStats {
             s.netDownKbps = (float) obj.optDouble("net_down_kb", 0.0);
             s.netUpKbps = (float) obj.optDouble("net_up_kb", 0.0);
             s.netIp = obj.optString("ip", "");
-            s.netMac = obj.optString("mac", "").toUpperCase(Locale.US);
+            s.netLink = obj.optString("net_link", obj.optString("mac", "--"));
+            s.netMac = s.netLink;
             s.diskUsedGb = (float) obj.optDouble("disk_used_gb", 0.0);
             s.diskTotalGb = (float) obj.optDouble("disk_total_gb", 0.0);
             s.diskPct = clampPct(obj.optInt("disk_pct", 0));
@@ -125,6 +142,8 @@ public class PcStats {
                     s.cpuCorePcts[i] = clampPct(arr.optInt(i, 0));
                 }
             }
+            s.gameName = obj.optString("game_name", "No Game");
+            s.gameFps = obj.optInt("game_fps", 0);
             s.timestamp = System.currentTimeMillis();
             return s;
         } catch (Throwable ignored) {
@@ -183,8 +202,12 @@ public class PcStats {
     public float getNetUpKbps() { return netUpKbps; }
     public String getNetIp() { return netIp; }
     public String getNetMac() { return netMac; }
+    public String getNetLink() { return (netLink != null && !netLink.isEmpty()) ? netLink : "--"; }
     public float getDiskUsedGb() { return diskUsedGb; }
     public float getDiskTotalGb() { return diskTotalGb; }
     public int getDiskPct() { return diskPct; }
+    public String getGameName() { return (gameName != null && !gameName.isEmpty()) ? gameName : "No Game"; }
+    public int getGameFps() { return gameFps; }
+    public boolean isGameRunning() { return gameFps > 0 || (gameName != null && !gameName.isEmpty() && !gameName.equalsIgnoreCase("No Game")); }
     public long getTimestamp() { return timestamp; }
 }

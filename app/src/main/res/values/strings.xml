@@ -15,6 +15,10 @@
     <string name="stat_net">NET</string>
     <string name="stat_net_down">Down</string>
     <string name="stat_net_up">Up</string>
+    <string name="stat_game">GAME</string>
+    <string name="stat_no_game">No Game</string>
+    <string name="stat_fps">%d FPS</string>
+    <string name="stat_fps_none">-- FPS</string>
     <string name="stat_audio_daemon">Audio Daemon</string>
     <string name="stat_pc_linked">PC Linked</string>
     <string name="stat_waiting_pc">Waiting for PC...</string>

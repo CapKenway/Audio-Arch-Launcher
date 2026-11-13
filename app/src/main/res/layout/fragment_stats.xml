@@ -92,7 +92,7 @@
         android:id="@+id/card_cpu"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1.25"
+        android:layout_weight="1.15"
         android:layout_marginBottom="3dp"
         app:cardBackgroundColor="@color/surface"
         app:cardCornerRadius="8dp"
@@ -424,20 +424,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="GPU Model"
-                android:textSize="10sp"
-                android:textColor="@color/textHint"
-                android:layout_marginTop="1dp"
+                android:textSize="11sp"
+                android:textColor="#E0E0E0"
+                android:layout_marginTop="2dp"
                 android:singleLine="true"
                 android:ellipsize="end" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 
-    <!-- Card 4: Network Speed & IP / MAC -->
+    <!-- Card 4: Network Speed & Dynamic Game Slot -->
     <androidx.cardview.widget.CardView
         android:id="@+id/card_net"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1.05"
+        android:layout_weight="1.15"
         app:cardBackgroundColor="@color/surface"
         app:cardCornerRadius="8dp"
         app:cardElevation="2dp">
@@ -446,115 +446,141 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:gravity="center_vertical"
             android:paddingLeft="9dp"
             android:paddingRight="9dp"
             android:paddingTop="3dp"
             android:paddingBottom="3dp">
 
+            <!-- Network Section (No progress bars, large readable text, normal font weight) -->
             <LinearLayout
+                android:id="@+id/container_net"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical"
                 android:gravity="center_vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/stat_net"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:textColor="#29B6F6" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
-
-                <TextView
-                    android:id="@+id/tv_net_speed_summary"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="\u2193 0 KB/s  \u2191 0 KB/s"
-                    android:textSize="11.5sp"
-                    android:textStyle="bold"
-                    android:textColor="#29B6F6" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="2dp">
-
-                <!-- Download Column -->
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginEnd="4dp">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
                     <TextView
-                        android:id="@+id/tv_net_down"
-                        android:layout_width="match_parent"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="\u2193 0 KB/s"
-                        android:textSize="9.5sp"
-                        android:textColor="#29B6F6"
-                        android:singleLine="true" />
+                        android:text="@string/stat_net"
+                        android:textSize="12.5sp"
+                        android:textStyle="bold"
+                        android:textColor="#29B6F6" />
 
-                    <ProgressBar
-                        android:id="@+id/pb_net_down"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:layout_width="match_parent"
-                        android:layout_height="3dp"
-                        android:layout_marginTop="1dp"
-                        android:max="100"
-                        android:progress="0"
-                        android:progressDrawable="@drawable/bg_progress_net_down" />
-                </LinearLayout>
-
-                <!-- Upload Column -->
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="4dp">
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
 
                     <TextView
-                        android:id="@+id/tv_net_up"
-                        android:layout_width="match_parent"
+                        android:id="@+id/tv_net_speed_summary"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="\u2191 0 KB/s"
-                        android:textSize="9.5sp"
-                        android:textColor="#AB47BC"
-                        android:singleLine="true" />
-
-                    <ProgressBar
-                        android:id="@+id/pb_net_up"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:layout_width="match_parent"
-                        android:layout_height="3dp"
-                        android:layout_marginTop="1dp"
-                        android:max="100"
-                        android:progress="0"
-                        android:progressDrawable="@drawable/bg_progress_net_up" />
+                        android:text="\u2193 0 KB/s  \u2191 0 KB/s"
+                        android:textSize="12sp"
+                        android:textStyle="normal"
+                        android:textColor="#ECEFF1" />
                 </LinearLayout>
+
+                <!-- Line 2: Dedicated IP Address -->
+                <TextView
+                    android:id="@+id/tv_net_ip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="IP: --"
+                    android:textSize="11sp"
+                    android:textStyle="normal"
+                    android:textColor="@color/textSecondary"
+                    android:layout_marginTop="2dp"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
+
+                <!-- Line 3: Dedicated Network Name & Link Speed -->
+                <TextView
+                    android:id="@+id/tv_net_link"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Link: --"
+                    android:textSize="10.5sp"
+                    android:textStyle="normal"
+                    android:textColor="#81D4FA"
+                    android:layout_marginTop="1dp"
+                    android:singleLine="true"
+                    android:ellipsize="end" />
             </LinearLayout>
 
-            <!-- IP and MAC Address Row -->
-            <TextView
-                android:id="@+id/tv_net_ip_mac"
+            <!-- Horizontal Divider Cutting Slot in 2 (Visible dynamically when game is running) -->
+            <View
+                android:id="@+id/divider_net_game"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="IP: --  \u2022  MAC: --"
-                android:textSize="9.5sp"
-                android:textColor="@color/textHint"
+                android:layout_height="1dp"
+                android:background="#2E3842"
                 android:layout_marginTop="2dp"
-                android:singleLine="true"
-                android:ellipsize="end" />
+                android:layout_marginBottom="2dp"
+                android:visibility="gone" />
+
+            <!-- Bottom Slot: Game Name, Live FPS & Real-time Graph (Visible dynamically when game is running) -->
+            <LinearLayout
+                android:id="@+id/container_game"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1.2"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/tv_game_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/stat_game"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="#00E676" />
+
+                    <TextView
+                        android:id="@+id/tv_game_name"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/stat_no_game"
+                        android:textSize="10.5sp"
+                        android:textColor="@color/textPrimary"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:singleLine="true"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/tv_game_fps"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/stat_fps_none"
+                        android:textSize="11.5sp"
+                        android:textStyle="bold"
+                        android:textColor="#00E676" />
+                </LinearLayout>
+
+                <!-- Real-time FPS Graph View -->
+                <com.audioarch.launcher.views.FpsGraphView
+                    android:id="@+id/view_fps_graph"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="1dp" />
+            </LinearLayout>
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 </LinearLayout>
