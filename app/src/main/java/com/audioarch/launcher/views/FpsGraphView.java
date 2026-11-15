@@ -149,7 +149,20 @@ public class FpsGraphView extends View {
         }
 
         if (sampleCount <= 1) {
-            // No history or single point: draw flat bottom line
+            // No history or single point
+            return;
+        }
+
+        // Check if there are any non-zero samples
+        boolean hasData = false;
+        for (int i = 0; i < sampleCount; i++) {
+            if (samples[i] > 0) {
+                hasData = true;
+                break;
+            }
+        }
+        if (!hasData) {
+            // Do not draw flat baseline when there is no valid FPS data
             return;
         }
 

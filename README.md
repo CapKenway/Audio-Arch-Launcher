@@ -45,13 +45,13 @@ You do **not** need to build from source or install Android Studio to use Audio 
 
 | Asset | Platform | Description |
 |---|---|---|
-| **`AudioArchLauncher-v1.5.apk`** | Android 4.0+ (API 14 -- 14+) | Pre-compiled Android application. Ultra-lightweight (~2 MB), battery-friendly, zero bloat. |
+| **`AudioArchLauncher-v1.6.apk`** | Android 4.0+ (API 14 -- 14+) | Pre-compiled Android application. Ultra-lightweight (~2 MB), battery-friendly, zero bloat. |
 | **`stat_sender.py`** | Linux (Host PC) | Python 3 telemetry daemon. Requires no heavy dependencies; reads directly from Linux `/proc` and `sysfs`. |
 
 ### Quick Install:
 ```bash
 # 1. Install APK on your Android device (via ADB or copy to phone storage):
-adb install -r AudioArchLauncher-v1.5.apk
+adb install -r AudioArchLauncher-v1.6.apk
 
 # 2. Run the telemetry daemon on your Linux PC:
 python3 stat_sender.py install
@@ -173,9 +173,9 @@ STAT|cpu_pct|cpu_temp|cpu_model|ram_used_gb|ram_total_gb|ram_pct|gpu_pct|gpu_tem
 
 ### 1. Install the Android App
 - **Option A: Pre-built APK (Recommended)**
-  Download `AudioArchLauncher-v1.5.apk` directly from [GitHub Releases](https://github.com/CapKenway/Audio-Arch-Launcher/releases):
+  Download `AudioArchLauncher-v1.6.apk` directly from [GitHub Releases](https://github.com/CapKenway/Audio-Arch-Launcher/releases):
   ```bash
-  adb install -r AudioArchLauncher-v1.5.apk
+  adb install -r AudioArchLauncher-v1.6.apk
   ```
 - **Option B: Build from Source with Gradle**
   ```bash

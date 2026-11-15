@@ -14,9 +14,11 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -33,8 +35,31 @@ import java.util.Locale;
 
 public class StatsFragment extends Fragment implements PcStatsServer.Listener {
 
-    private View dotPcStatus, dotDaemonPill, pillDaemonStatus, headerBar;
+    private View dotPcStatus, dotDaemonPill, pillDaemonStatus, headerBar, containerPcStatus;
     private TextView tvPcStatus, tvDaemonPill;
+    private long lastPacketTime = 0;
+    private float measuredRateHz = 1.0f;
+
+    // Smooth transition & slow fallback fields
+    private float currentCpuPct = 0f;
+    private float targetCpuPct = 0f;
+    private float currentGpuPct = 0f;
+    private float targetGpuPct = 0f;
+    private float[] currentCorePcts = null;
+    private int[] targetCorePcts = null;
+
+    private float smoothCpuKhz = 0f;
+    private float targetCpuKhz = 0f;
+    private float smoothGpuCoreKhz = 0f;
+    private float targetGpuCoreKhz = 0f;
+    private float smoothGpuMemKhz = 0f;
+    private float targetGpuMemKhz = 0f;
+
+    private String baseCpuName = "CPU";
+    private String baseGpuName = "GPU";
+    private float lastVramUsed = 0f;
+    private float lastVramTotal = 0f;
+    private boolean isSmoothLoopActive = false;
 
     // CPU Card
     private TextView tvCpuDetail, tvCpuPct, tvCpuTemp;
@@ -105,6 +130,10 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
 
         dotPcStatus = view.findViewById(R.id.dot_pc_status);
         tvPcStatus = view.findViewById(R.id.tv_pc_status);
+        containerPcStatus = view.findViewById(R.id.container_pc_status);
+        if (containerPcStatus != null) {
+            containerPcStatus.setOnClickListener(v -> showRateSelectionDialog());
+        }
         dotDaemonPill = view.findViewById(R.id.dot_daemon_pill);
         tvDaemonPill = view.findViewById(R.id.tv_daemon_pill);
         pillDaemonStatus = view.findViewById(R.id.pill_daemon_status);
@@ -172,6 +201,9 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
         if (ctx != null) {
             daemonController = new DaemonController();
             prefs = ctx.getSharedPreferences("audioarch_prefs", Context.MODE_PRIVATE);
+            float prefInterval = prefs.getFloat("stats_refresh_interval", 1.0f);
+            PcStatsServer.getInstance().setIntervalSec(prefInterval);
+            measuredRateHz = 1.0f / prefInterval;
         }
 
         // Ensure stats server is running
@@ -216,19 +248,40 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
         pollDaemonStatusAsync();
         handler.removeCallbacks(daemonPollRunnable);
         handler.postDelayed(daemonPollRunnable, 2500);
+
+        if (PcStatsServer.getInstance().isCallMode()) {
+            handler.removeCallbacks(pollPacketRunnable);
+            handler.post(pollPacketRunnable);
+        }
     }
 
     @Override
     public void onPause() {
         isVisibleToUser = false;
+        isSmoothLoopActive = false;
+        handler.removeCallbacks(smoothTransitionRunnable);
+        handler.removeCallbacks(pollPacketRunnable);
         PcStatsServer.getInstance().removeListener(this);
         handler.removeCallbacks(daemonPollRunnable);
         super.onPause();
     }
 
+    private final Runnable pollPacketRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!isVisibleToUser || !isAdded()) return;
+            if (PcStatsServer.getInstance().isCallMode() && PcStatsServer.getInstance().isConnected()) {
+                PcStatsServer.getInstance().requestPacket();
+                handler.postDelayed(this, 80); // ~12.5 Hz smooth request cadence
+            }
+        }
+    };
+
     @Override
     public void onStatsReceived(PcStats stats) {
         if (!isAdded() || !isVisibleToUser) return;
+        measuredRateHz = PcStatsServer.getInstance().getMeasuredRateHz();
+        updateConnectionUi(true);
         updatePcStatsUi(stats);
     }
 
@@ -243,8 +296,273 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
             dotPcStatus.setBackgroundResource(connected ? R.drawable.bg_status_running : R.drawable.bg_status_stopped);
         }
         if (tvPcStatus != null) {
-            tvPcStatus.setText(connected ? R.string.stat_pc_linked : R.string.stat_waiting_pc);
-            tvPcStatus.setTextColor(connected ? 0xFF00BCD4 : 0xFF888888);
+            if (connected) {
+                String rateLabel = getFormattedRate();
+                tvPcStatus.setText("PC Linked (" + rateLabel + ")");
+                tvPcStatus.setTextColor(0xFF00BCD4);
+            } else {
+                tvPcStatus.setText(R.string.stat_waiting_pc);
+                tvPcStatus.setTextColor(0xFF888888);
+            }
+        }
+    }
+
+    private String getFormattedRate() {
+        if (PcStatsServer.getInstance().isCallMode()) {
+            return String.format(Locale.US, "Call %.0f Hz", measuredRateHz);
+        } else if (measuredRateHz >= 100f) {
+            return String.format(Locale.US, "%.0f Hz (Max)", measuredRateHz);
+        } else if (measuredRateHz >= 40f) {
+            return String.format(Locale.US, "%.0f Hz (Fast)", measuredRateHz);
+        } else if (measuredRateHz >= 17f && measuredRateHz <= 23f) {
+            return "20 Hz";
+        } else if (measuredRateHz >= 8.5f && measuredRateHz <= 12f) {
+            return "10 Hz";
+        } else if (measuredRateHz >= 3.4f && measuredRateHz <= 4.6f) {
+            return "4 Hz";
+        } else if (measuredRateHz >= 1.7f && measuredRateHz <= 2.3f) {
+            return "2 Hz";
+        } else if (measuredRateHz >= 0.85f && measuredRateHz <= 1.25f) {
+            return "1 Hz";
+        } else if (measuredRateHz >= 0.42f && measuredRateHz <= 0.65f) {
+            return "0.5 Hz";
+        } else if (measuredRateHz >= 0.25f && measuredRateHz <= 0.41f) {
+            return "0.33 Hz";
+        } else if (measuredRateHz >= 10f) {
+            return String.format(Locale.US, "%.0f Hz", measuredRateHz);
+        } else {
+            return String.format(Locale.US, "%.1f Hz", measuredRateHz);
+        }
+    }
+
+    private void showRateSelectionDialog() {
+        Context c = getContext();
+        if (c == null) return;
+        final SharedPreferences p = c.getSharedPreferences("audioarch_prefs", Context.MODE_PRIVATE);
+        final String[] options = {
+                "Call Mode (On-Demand / App Driven)",
+                "0 ms (Uncapped - Fast as Possible)",
+                "50 ms (20 Hz - Ultra Smooth)",
+                "100 ms (10 Hz - Smooth Gaming)",
+                "0.25s (4 Hz - Fast)",
+                "0.5s (2 Hz - Balanced)",
+                "1.0s (1 Hz - Standard / Default)",
+                "2.0s (0.5 Hz - Low CPU)",
+                "3.0s (0.33 Hz - Power Saver)"
+        };
+        final float[] values = {-1.0f, 0.0f, 0.05f, 0.10f, 0.25f, 0.5f, 1.0f, 2.0f, 3.0f};
+        float current = p.getFloat("stats_refresh_interval", -1.0f);
+        int selected = 0;
+        for (int i = 0; i < values.length; i++) {
+            if (Math.abs(values[i] - current) < 0.02f) {
+                selected = i;
+                break;
+            }
+        }
+
+        new AlertDialog.Builder(c)
+                .setTitle("Telemetry Update Frequency")
+                .setSingleChoiceItems(options, selected, (dialog, which) -> {
+                    float chosen = values[which];
+                    p.edit().putFloat("stats_refresh_interval", chosen).apply();
+                    PcStatsServer.getInstance().setIntervalSec(chosen);
+                    measuredRateHz = PcStatsServer.getInstance().getMeasuredRateHz();
+                    handler.removeCallbacks(pollPacketRunnable);
+                    if (PcStatsServer.getInstance().isCallMode()) {
+                        handler.post(pollPacketRunnable);
+                    }
+                    updateConnectionUi(PcStatsServer.getInstance().isConnected());
+                    dialog.dismiss();
+                    Toast.makeText(c, "Stats rate set to " + options[which], Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private final Runnable smoothTransitionRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!isVisibleToUser || !isAdded()) {
+                isSmoothLoopActive = false;
+                return;
+            }
+
+            boolean stillMoving = stepSmoothTransitions();
+            if (stillMoving) {
+                handler.postDelayed(this, 30);
+            } else {
+                isSmoothLoopActive = false;
+            }
+        }
+    };
+
+    private void startSmoothTransitionLoop() {
+        if (!isSmoothLoopActive) {
+            isSmoothLoopActive = true;
+            handler.post(smoothTransitionRunnable);
+        }
+    }
+
+    private boolean stepSmoothTransitions() {
+        boolean active = false;
+
+        // 1. CPU Usage: smooth rise (0.22), graceful fallback (0.06)
+        if (Math.abs(targetCpuPct - currentCpuPct) > 0.3f) {
+            active = true;
+            if (targetCpuPct > currentCpuPct) {
+                currentCpuPct += (targetCpuPct - currentCpuPct) * 0.22f;
+            } else {
+                currentCpuPct += (targetCpuPct - currentCpuPct) * 0.06f;
+            }
+        } else {
+            currentCpuPct = targetCpuPct;
+        }
+        int cpuInt = Math.round(currentCpuPct);
+        if (cpuInt != cachedCpuProgress && pbCpu != null) {
+            cachedCpuProgress = cpuInt;
+            pbCpu.setProgress(cpuInt);
+        }
+        String cpuStr = cpuInt + "%";
+        if (!cpuStr.equals(cachedCpuPct) && tvCpuPct != null) {
+            cachedCpuPct = cpuStr;
+            tvCpuPct.setText(cpuStr);
+        }
+
+        // 2. CPU Core Bars: smooth rise (0.22), graceful fallback (0.06)
+        if (targetCorePcts != null && pbCores != null) {
+            if (currentCorePcts == null || currentCorePcts.length != targetCorePcts.length) {
+                currentCorePcts = new float[targetCorePcts.length];
+                for (int i = 0; i < targetCorePcts.length; i++) {
+                    currentCorePcts[i] = targetCorePcts[i];
+                }
+            }
+            for (int i = 0; i < targetCorePcts.length && i < pbCores.length; i++) {
+                float t = targetCorePcts[i];
+                float c = currentCorePcts[i];
+                if (Math.abs(t - c) > 0.4f) {
+                    active = true;
+                    if (t > c) {
+                        currentCorePcts[i] += (t - c) * 0.22f;
+                    } else {
+                        currentCorePcts[i] += (t - c) * 0.06f;
+                    }
+                } else {
+                    currentCorePcts[i] = t;
+                }
+                int coreInt = Math.round(currentCorePcts[i]);
+                if (pbCores[i] != null && cachedCoreProgress != null && i < cachedCoreProgress.length && cachedCoreProgress[i] != coreInt) {
+                    cachedCoreProgress[i] = coreInt;
+                    pbCores[i].setProgress(coreInt);
+                }
+            }
+        }
+
+        // 3. GPU Usage: smooth rise (0.22), graceful fallback (0.06)
+        if (Math.abs(targetGpuPct - currentGpuPct) > 0.3f) {
+            active = true;
+            if (targetGpuPct > currentGpuPct) {
+                currentGpuPct += (targetGpuPct - currentGpuPct) * 0.22f;
+            } else {
+                currentGpuPct += (targetGpuPct - currentGpuPct) * 0.06f;
+            }
+        } else {
+            currentGpuPct = targetGpuPct;
+        }
+        int gpuInt = Math.round(currentGpuPct);
+        if (gpuInt != cachedGpuProgress && pbGpu != null) {
+            cachedGpuProgress = gpuInt;
+            pbGpu.setProgress(gpuInt);
+        }
+        String gpuStr = "Core: " + gpuInt + "%";
+        if (!gpuStr.equals(cachedGpuPct) && tvGpuPct != null) {
+            cachedGpuPct = gpuStr;
+            tvGpuPct.setText(gpuStr);
+        }
+
+        // 4. CPU Clock in kHz: smooth rise (0.20), graceful fallback (0.06)
+        if (targetCpuKhz > 0) {
+            float diff = targetCpuKhz - smoothCpuKhz;
+            if (Math.abs(diff) > 1500f) {
+                active = true;
+                if (diff > 0) smoothCpuKhz += diff * 0.20f;
+                else smoothCpuKhz += diff * 0.06f;
+            } else {
+                smoothCpuKhz = targetCpuKhz;
+            }
+            renderCpuClock(smoothCpuKhz);
+        }
+
+        // 5. GPU Core Clock in kHz: smooth rise (0.20), graceful fallback (0.06)
+        if (targetGpuCoreKhz > 0) {
+            float diff = targetGpuCoreKhz - smoothGpuCoreKhz;
+            if (Math.abs(diff) > 1500f) {
+                active = true;
+                if (diff > 0) smoothGpuCoreKhz += diff * 0.20f;
+                else smoothGpuCoreKhz += diff * 0.06f;
+            } else {
+                smoothGpuCoreKhz = targetGpuCoreKhz;
+            }
+            renderGpuCoreClock(smoothGpuCoreKhz);
+        }
+
+        // 6. GPU Memory Clock in kHz
+        if (targetGpuMemKhz > 0) {
+            float diff = targetGpuMemKhz - smoothGpuMemKhz;
+            if (Math.abs(diff) > 1500f) {
+                active = true;
+                if (diff > 0) smoothGpuMemKhz += diff * 0.20f;
+                else smoothGpuMemKhz += diff * 0.06f;
+            } else {
+                smoothGpuMemKhz = targetGpuMemKhz;
+            }
+            renderVramClock(smoothGpuMemKhz);
+        }
+
+        return active;
+    }
+
+    private void renderCpuClock(float khz) {
+        if (tvCpuDetail == null) return;
+        float ghz = khz / 1_000_000.0f;
+        String text;
+        if (ghz > 0.1f) {
+            text = String.format(Locale.US, "%s@%.3fGHz", baseCpuName, ghz);
+        } else {
+            text = baseCpuName;
+        }
+        if (!text.equals(cachedCpuDetail)) {
+            cachedCpuDetail = text;
+            tvCpuDetail.setText(text);
+        }
+    }
+
+    private void renderGpuCoreClock(float khz) {
+        if (tvGpuDetail == null) return;
+        float ghz = khz / 1_000_000.0f;
+        String text;
+        if (ghz > 0.05f) {
+            text = String.format(Locale.US, "%s@%.3fGHz", baseGpuName, ghz);
+        } else {
+            text = baseGpuName;
+        }
+        if (!text.equals(cachedGpuDetail)) {
+            cachedGpuDetail = text;
+            tvGpuDetail.setText(text);
+        }
+    }
+
+    private void renderVramClock(float khz) {
+        if (tvVramDetail == null) return;
+        float ghz = khz / 1_000_000.0f;
+        String text;
+        if (ghz > 0.05f) {
+            text = String.format(Locale.US, "%.1f / %.1f GB @ %.3fGHz", lastVramUsed, lastVramTotal, ghz);
+        } else {
+            text = String.format(Locale.US, "%.1f / %.1f GB", lastVramUsed, lastVramTotal);
+        }
+        if (!text.equals(cachedVramDetail)) {
+            cachedVramDetail = text;
+            tvVramDetail.setText(text);
         }
     }
 
@@ -331,13 +649,34 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
     private void updatePcStatsUi(PcStats stats) {
         if (stats == null) return;
 
-        // 1. CPU
-        int cpu = stats.getCpuPct();
-        String cpuPctStr = cpu + "%";
-        if (!cpuPctStr.equals(cachedCpuPct) && tvCpuPct != null) {
-            cachedCpuPct = cpuPctStr;
-            tvCpuPct.setText(cpuPctStr);
+        // Set targets for smooth animation & slow fallback loop
+        targetCpuPct = stats.getCpuPct();
+        targetCorePcts = stats.getCpuCorePcts();
+        targetGpuPct = stats.getGpuPct();
+        targetCpuKhz = stats.getCpuKhz();
+        targetGpuCoreKhz = stats.getGpuCoreKhz();
+        targetGpuMemKhz = stats.getGpuMemKhz();
+
+        String cModel = stats.getCpuBaseModel();
+        if (cModel != null && !cModel.isEmpty()) {
+            baseCpuName = cModel;
         }
+        String gModel = stats.getGpuBaseName();
+        if (gModel != null && !gModel.isEmpty()) {
+            baseGpuName = gModel;
+        }
+
+        lastVramUsed = stats.getVramUsedGb();
+        lastVramTotal = stats.getVramTotalGb();
+
+        // Initial values on first packet to avoid jumping from 0
+        if (smoothCpuKhz <= 0 && targetCpuKhz > 0) smoothCpuKhz = targetCpuKhz;
+        if (smoothGpuCoreKhz <= 0 && targetGpuCoreKhz > 0) smoothGpuCoreKhz = targetGpuCoreKhz;
+        if (smoothGpuMemKhz <= 0 && targetGpuMemKhz > 0) smoothGpuMemKhz = targetGpuMemKhz;
+        if (currentCpuPct <= 0 && targetCpuPct > 0) currentCpuPct = targetCpuPct;
+        if (currentGpuPct <= 0 && targetGpuPct > 0) currentGpuPct = targetGpuPct;
+
+        // 1. CPU Temp & Detail
         if (tvCpuTemp != null) {
             String cpuTempStr = stats.getCpuTemp() > 0 ? stats.getCpuTemp() + "\u00B0C" : "--\u00B0C";
             if (!cpuTempStr.equals(cachedCpuTemp)) {
@@ -345,10 +684,14 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
                 tvCpuTemp.setText(cpuTempStr);
             }
         }
-        String cpuDetailStr = stats.getCpuModel();
-        if (!cpuDetailStr.equals(cachedCpuDetail) && tvCpuDetail != null) {
-            cachedCpuDetail = cpuDetailStr;
-            tvCpuDetail.setText(cpuDetailStr);
+        if (targetCpuKhz > 0) {
+            renderCpuClock(smoothCpuKhz);
+        } else {
+            String cpuDetailStr = stats.getCpuModel();
+            if (!cpuDetailStr.equals(cachedCpuDetail) && tvCpuDetail != null) {
+                cachedCpuDetail = cpuDetailStr;
+                tvCpuDetail.setText(cpuDetailStr);
+            }
         }
 
         // Per-Core Bars (2 or 3 Columns)
@@ -360,25 +703,10 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
             if (pbCores == null || pbCores.length != corePcts.length) {
                 setupCpuCoreBars(corePcts.length);
             }
-            if (pbCores != null) {
-                for (int i = 0; i < corePcts.length; i++) {
-                    int p = corePcts[i];
-                    if (cachedCoreProgress != null && i < cachedCoreProgress.length && p != cachedCoreProgress[i] && pbCores[i] != null) {
-                        cachedCoreProgress[i] = p;
-                        pbCores[i].setProgress(p);
-                    }
-                }
-            }
         } else {
             // Fallback to overall bar if per-core stats are not present
             if (containerCpuCores != null) containerCpuCores.setVisibility(View.GONE);
-            if (pbCpu != null) {
-                pbCpu.setVisibility(View.VISIBLE);
-                if (cpu != cachedCpuProgress) {
-                    cachedCpuProgress = cpu;
-                    pbCpu.setProgress(cpu);
-                }
-            }
+            if (pbCpu != null) pbCpu.setVisibility(View.VISIBLE);
         }
 
         // 2. RAM & DISK
@@ -416,16 +744,6 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
         }
 
         // 3. GPU (Core & VRAM)
-        int gpu = stats.getGpuPct();
-        if (gpu != cachedGpuProgress && pbGpu != null) {
-            cachedGpuProgress = gpu;
-            pbGpu.setProgress(gpu);
-        }
-        String gpuPctStr = "Core: " + gpu + "%";
-        if (!gpuPctStr.equals(cachedGpuPct) && tvGpuPct != null) {
-            cachedGpuPct = gpuPctStr;
-            tvGpuPct.setText(gpuPctStr);
-        }
         if (tvGpuTemp != null) {
             String gpuTempStr = stats.getGpuTemp() > 0 ? stats.getGpuTemp() + "\u00B0C" : "--\u00B0C";
             if (!gpuTempStr.equals(cachedGpuTemp)) {
@@ -445,18 +763,36 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
             cachedVramPct = vramPctStr;
             tvVramPct.setText(vramPctStr);
         }
-        String vramDetailStr = String.format(Locale.US, "%.1f / %.1f GB", stats.getVramUsedGb(), stats.getVramTotalGb());
-        if (!vramDetailStr.equals(cachedVramDetail) && tvVramDetail != null) {
-            cachedVramDetail = vramDetailStr;
-            tvVramDetail.setText(vramDetailStr);
+        if (targetGpuMemKhz > 0) {
+            renderVramClock(smoothGpuMemKhz);
+        } else {
+            String vramDetailStr;
+            if (stats.getGpuMemGhz() > 0.05f) {
+                vramDetailStr = String.format(Locale.US, "%.1f / %.1f GB @ %.3fGHz",
+                        stats.getVramUsedGb(), stats.getVramTotalGb(), stats.getGpuMemGhz());
+            } else {
+                vramDetailStr = String.format(Locale.US, "%.1f / %.1f GB",
+                        stats.getVramUsedGb(), stats.getVramTotalGb());
+            }
+            if (!vramDetailStr.equals(cachedVramDetail) && tvVramDetail != null) {
+                cachedVramDetail = vramDetailStr;
+                tvVramDetail.setText(vramDetailStr);
+            }
         }
 
-        // GPU Model Name
-        String gpuModel = stats.getGpuName();
-        if (!gpuModel.equals(cachedGpuDetail) && tvGpuDetail != null) {
-            cachedGpuDetail = gpuModel;
-            tvGpuDetail.setText(gpuModel);
+        // GPU Model Name (fallback if no dynamic clock)
+        if (targetGpuCoreKhz > 0) {
+            renderGpuCoreClock(smoothGpuCoreKhz);
+        } else {
+            String gpuModel = stats.getGpuName();
+            if (!gpuModel.equals(cachedGpuDetail) && tvGpuDetail != null) {
+                cachedGpuDetail = gpuModel;
+                tvGpuDetail.setText(gpuModel);
+            }
         }
+
+        // Kick off smooth transition loop for CPU%, GPU%, core bars, and frequencies
+        startSmoothTransitionLoop();
 
         // 4. Network Speed & IP / Link Info (Bottom Right)
         float downKb = stats.getNetDownKbps();
@@ -505,14 +841,30 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
             }
 
             int fps = stats.getGameFps();
-            String fpsStr = fps > 0 ? (fps + " FPS") : "-- FPS";
-            if (!fpsStr.equals(cachedGameFps) && tvGameFps != null) {
-                cachedGameFps = fpsStr;
-                tvGameFps.setText(fpsStr);
-            }
+            if (fps > 0) {
+                String fpsStr = fps + " FPS";
+                if (!fpsStr.equals(cachedGameFps) && tvGameFps != null) {
+                    cachedGameFps = fpsStr;
+                    tvGameFps.setText(fpsStr);
+                }
 
-            if (viewFpsGraph != null) {
-                viewFpsGraph.addFps(fps);
+                if (viewFpsGraph != null) {
+                    if (viewFpsGraph.getVisibility() != View.VISIBLE) {
+                        viewFpsGraph.setVisibility(View.VISIBLE);
+                    }
+                    viewFpsGraph.addFps(fps);
+                }
+            } else {
+                String fpsStr = "-- FPS";
+                if (!fpsStr.equals(cachedGameFps) && tvGameFps != null) {
+                    cachedGameFps = fpsStr;
+                    tvGameFps.setText(fpsStr);
+                }
+
+                // Hide the graph when there is no FPS telemetry so it doesn't show a null baseline
+                if (viewFpsGraph != null && viewFpsGraph.getVisibility() != View.GONE) {
+                    viewFpsGraph.setVisibility(View.GONE);
+                }
             }
         } else {
             if (dividerNetGame != null && dividerNetGame.getVisibility() != View.GONE) {

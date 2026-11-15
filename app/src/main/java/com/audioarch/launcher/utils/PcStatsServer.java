@@ -8,10 +8,14 @@ import com.audioarch.launcher.models.PcStats;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PcStatsServer {
     private static final String TAG = "PcStatsServer";
@@ -26,6 +30,12 @@ public class PcStatsServer {
 
     private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private final ExecutorService commandExecutor = Executors.newSingleThreadExecutor();
+
+    private final PcStats[] packetBuffer = new PcStats[3];
+    private int bufferCount = 0;
+    private int bufferHead = 0;
+    private final AtomicBoolean isDispatchPending = new AtomicBoolean(false);
 
     private ServerSocket serverSocket;
     private Thread serverThread;
@@ -33,6 +43,10 @@ public class PcStatsServer {
     private volatile boolean isConnected = false;
     private volatile PcStats lastStats = null;
     private int currentPort = DEFAULT_PORT;
+    private volatile float currentIntervalSec = 0.0f;
+    private volatile float measuredRateHz = 1.0f;
+    private long lastPacketTime = 0;
+    private volatile OutputStream activeOut = null;
 
     public static synchronized PcStatsServer getInstance() {
         if (instance == null) {
@@ -95,11 +109,72 @@ public class PcStatsServer {
         return lastStats;
     }
 
+    public void setIntervalSec(float intervalSec) {
+        if (intervalSec < 0) {
+            this.currentIntervalSec = -1.0f;
+            this.measuredRateHz = 12.0f;
+        } else {
+            this.currentIntervalSec = Math.max(0.0f, Math.min(10.0f, intervalSec));
+            if (this.currentIntervalSec > 0.01f) {
+                this.measuredRateHz = 1.0f / this.currentIntervalSec;
+            }
+        }
+        sendRateToClient(this.currentIntervalSec);
+    }
+
+    public boolean isCallMode() {
+        return currentIntervalSec < 0;
+    }
+
+    public float getIntervalSec() {
+        return currentIntervalSec;
+    }
+
+    public float getMeasuredRateHz() {
+        return measuredRateHz;
+    }
+
+    public void requestPacket() {
+        final OutputStream out = activeOut;
+        if (out != null) {
+            commandExecutor.execute(() -> {
+                try {
+                    out.write("REQ\n".getBytes("UTF-8"));
+                    out.flush();
+                } catch (Throwable ignored) {}
+            });
+        }
+    }
+
+    private synchronized void sendRateToClient(float intervalSec) {
+        final OutputStream out = activeOut;
+        if (out != null) {
+            commandExecutor.execute(() -> {
+                try {
+                    String msg;
+                    if (intervalSec < 0) {
+                        msg = "MODE CALL\n";
+                    } else if (intervalSec <= 0.01f) {
+                        msg = "MODE STREAM\nRATE 0.0\n";
+                    } else {
+                        msg = "MODE STREAM\nRATE " + String.format(java.util.Locale.US, "%.2f", intervalSec) + "\n";
+                    }
+                    out.write(msg.getBytes("UTF-8"));
+                    out.flush();
+                    Log.i(TAG, "Sent control command to PC: " + msg.replace("\n", " ").trim());
+                } catch (Throwable t) {
+                    Log.w(TAG, "Failed sending command to PC: " + t.getMessage());
+                }
+            });
+        }
+    }
+
     private void listenLoop() {
         while (running) {
             try {
-                serverSocket = new ServerSocket(currentPort);
+                serverSocket = new ServerSocket();
                 serverSocket.setReuseAddress(true);
+                serverSocket.bind(new java.net.InetSocketAddress(currentPort));
                 Log.i(TAG, "Stats server listening on port " + currentPort);
 
                 while (running) {
@@ -107,13 +182,33 @@ public class PcStatsServer {
                     try {
                         client = serverSocket.accept();
                         client.setTcpNoDelay(true);
-                        client.setSoTimeout(3500); // 3.5s timeout for heartbeat
+                        int soTimeout = Math.max(6000, (int) (currentIntervalSec * 3500));
+                        client.setSoTimeout(soTimeout);
+                        activeOut = client.getOutputStream();
                         setConnected(true);
+                        sendRateToClient(currentIntervalSec);
 
                         BufferedReader reader = new BufferedReader(
                                 new InputStreamReader(client.getInputStream()), 256);
                         String line;
+                        synchronized (packetBuffer) {
+                            bufferCount = 0;
+                            bufferHead = 0;
+                        }
+                        isDispatchPending.set(false);
+                        lastPacketTime = 0;
+
                         while (running && (line = reader.readLine()) != null) {
+                            long now = System.currentTimeMillis();
+                            if (lastPacketTime > 0) {
+                                long delta = now - lastPacketTime;
+                                if (delta > 2) {
+                                    float instantHz = 1000.0f / delta;
+                                    measuredRateHz = (measuredRateHz * 0.8f) + (instantHz * 0.2f);
+                                }
+                            }
+                            lastPacketTime = now;
+
                             line = line.trim();
                             if (line.isEmpty()) continue;
 
@@ -122,8 +217,34 @@ public class PcStatsServer {
                                     : PcStats.parseDelimited(line);
 
                             if (stats != null) {
-                                lastStats = stats;
-                                dispatchStats(stats);
+                                synchronized (packetBuffer) {
+                                    packetBuffer[bufferHead] = stats;
+                                    bufferHead = (bufferHead + 1) % 3;
+                                    if (bufferCount < 3) bufferCount++;
+                                }
+
+                                // 3-packet buffer smoothing with non-blocking UI queue dispatch
+                                if (isDispatchPending.compareAndSet(false, true)) {
+                                    mainHandler.post(() -> {
+                                        isDispatchPending.set(false);
+                                        PcStats[] snapshot = new PcStats[3];
+                                        int count;
+                                        synchronized (packetBuffer) {
+                                            count = bufferCount;
+                                            int start = (bufferHead - count + 3) % 3;
+                                            for (int i = 0; i < count; i++) {
+                                                snapshot[i] = packetBuffer[(start + i) % 3];
+                                            }
+                                        }
+                                        PcStats smoothed = PcStats.smoothFromBuffer(snapshot, count);
+                                        if (smoothed != null) {
+                                            lastStats = smoothed;
+                                            for (Listener l : listeners) {
+                                                l.onStatsReceived(smoothed);
+                                            }
+                                        }
+                                    });
+                                }
                             }
                         }
                     } catch (SocketTimeoutException te) {
@@ -133,7 +254,13 @@ public class PcStatsServer {
                             Log.d(TAG, "Client session error: " + t.getMessage());
                         }
                     } finally {
+                        activeOut = null;
                         setConnected(false);
+                        synchronized (packetBuffer) {
+                            bufferCount = 0;
+                            bufferHead = 0;
+                        }
+                        isDispatchPending.set(false);
                         if (client != null) {
                             try { client.close(); } catch (Throwable ignored) {}
                         }
@@ -144,7 +271,7 @@ public class PcStatsServer {
                     Log.w(TAG, "ServerSocket error: " + t.getMessage());
                     setConnected(false);
                     try {
-                        Thread.sleep(2000);
+                        Thread.sleep(1500);
                     } catch (InterruptedException ie) {
                         break;
                     }
@@ -168,14 +295,6 @@ public class PcStatsServer {
                 }
             });
         }
-    }
-
-    private void dispatchStats(PcStats stats) {
-        mainHandler.post(() -> {
-            for (Listener l : listeners) {
-                l.onStatsReceived(stats);
-            }
-        });
     }
 }
 

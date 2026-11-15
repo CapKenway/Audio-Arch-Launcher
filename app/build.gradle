@@ -22,8 +22,8 @@ android {
         applicationId "com.audioarch.launcher"
         minSdk 14
         targetSdk 22
-        versionCode 6
-        def baseVer = "1.5"
+        versionCode 7
+        def baseVer = "1.6"
         def gitHash = getGitHash()
         versionName "${baseVer} (${gitHash})"
         buildConfigField "String", "GIT_HASH", "\"${gitHash}\""

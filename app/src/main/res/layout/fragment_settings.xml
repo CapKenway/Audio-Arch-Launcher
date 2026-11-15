@@ -192,6 +192,52 @@
             android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp" />
 
+        <!-- PC Stats Dashboard Section -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="PC Stats Telemetry"
+            android:textSize="@dimen/text_subtitle"
+            android:textStyle="bold"
+            android:textColor="@color/colorPrimary"
+            android:textAllCaps="true"
+            android:letterSpacing="0.05"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Telemetry Refresh Rate -->
+        <LinearLayout
+            android:id="@+id/setting_stats_rate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Update Frequency Rate"
+                android:textSize="@dimen/text_subtitle"
+                android:textColor="@color/textPrimary" />
+            <TextView
+                android:id="@+id/setting_stats_rate_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="1.0s (1 Hz - Balanced)"
+                android:textSize="@dimen/text_body"
+                android:textColor="@color/textSecondary"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/divider"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp" />
+
         <!-- About Section -->
         <TextView
             android:layout_width="match_parent"

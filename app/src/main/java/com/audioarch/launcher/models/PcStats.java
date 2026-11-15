@@ -17,6 +17,12 @@ public class PcStats {
     private float vramUsedGb;
     private float vramTotalGb;
     private int vramPct;
+    private float gpuMemGhz;
+    private long cpuKhz;
+    private long gpuCoreKhz;
+    private long gpuMemKhz;
+    private String cpuBaseModel;
+    private String gpuBaseName;
     private String gpuName;
     private float netDownKbps;
     private float netUpKbps;
@@ -43,6 +49,12 @@ public class PcStats {
         this.vramUsedGb = 0f;
         this.vramTotalGb = 0f;
         this.vramPct = 0;
+        this.gpuMemGhz = 0f;
+        this.cpuKhz = 0L;
+        this.gpuCoreKhz = 0L;
+        this.gpuMemKhz = 0L;
+        this.cpuBaseModel = "CPU";
+        this.gpuBaseName = "GPU";
         this.gpuName = "PC GPU";
         this.netDownKbps = 0f;
         this.netUpKbps = 0f;
@@ -103,6 +115,52 @@ public class PcStats {
             if (parts.length > 22) {
                 s.gameFps = parseInt(parts[22], 0);
             }
+            if (parts.length > 23) {
+                float v23 = parseFloat(parts[23], 0f);
+                if (v23 > 10000f) {
+                    s.gpuMemKhz = (long) v23;
+                    s.gpuMemGhz = s.gpuMemKhz / 1_000_000f;
+                } else {
+                    s.gpuMemGhz = v23;
+                    s.gpuMemKhz = (long) (v23 * 1_000_000f);
+                }
+            }
+            if (parts.length > 24) {
+                s.cpuKhz = parseLong(parts[24], 0L);
+            }
+            if (parts.length > 25) {
+                s.gpuCoreKhz = parseLong(parts[25], 0L);
+            }
+            if (parts.length > 26) {
+                long mKhz = parseLong(parts[26], 0L);
+                if (mKhz > 0) {
+                    s.gpuMemKhz = mKhz;
+                    s.gpuMemGhz = mKhz / 1_000_000f;
+                }
+            }
+
+            // Extract base names and fallback clocks from formatted strings if not set
+            if (s.cpuModel.contains("@")) {
+                String[] p = s.cpuModel.split("@", 2);
+                s.cpuBaseModel = p[0].trim();
+                if (s.cpuKhz <= 0 && p.length > 1) {
+                    String num = p[1].replace("GHz", "").replace("ghz", "").trim();
+                    s.cpuKhz = (long) (parseFloat(num, 0f) * 1_000_000f);
+                }
+            } else {
+                s.cpuBaseModel = s.cpuModel;
+            }
+
+            if (s.gpuName.contains("@")) {
+                String[] p = s.gpuName.split("@", 2);
+                s.gpuBaseName = p[0].trim();
+                if (s.gpuCoreKhz <= 0 && p.length > 1) {
+                    String num = p[1].replace("GHz", "").replace("ghz", "").trim();
+                    s.gpuCoreKhz = (long) (parseFloat(num, 0f) * 1_000_000f);
+                }
+            } else {
+                s.gpuBaseName = s.gpuName;
+            }
             s.timestamp = System.currentTimeMillis();
             return s;
         } catch (Throwable ignored) {
@@ -144,6 +202,7 @@ public class PcStats {
             }
             s.gameName = obj.optString("game_name", "No Game");
             s.gameFps = obj.optInt("game_fps", 0);
+            s.gpuMemGhz = (float) obj.optDouble("gpu_mem_ghz", 0.0);
             s.timestamp = System.currentTimeMillis();
             return s;
         } catch (Throwable ignored) {
@@ -170,6 +229,14 @@ public class PcStats {
         }
     }
 
+    private static long parseLong(String str, long def) {
+        try {
+            return Long.parseLong(str.trim());
+        } catch (Throwable ignored) {
+            return def;
+        }
+    }
+
     private static float parseFloat(String str, float def) {
         try {
             return Float.parseFloat(str.trim());
@@ -187,6 +254,8 @@ public class PcStats {
     public int getCpuPct() { return cpuPct; }
     public int getCpuTemp() { return cpuTemp; }
     public String getCpuModel() { return cpuModel; }
+    public String getCpuBaseModel() { return (cpuBaseModel != null && !cpuBaseModel.isEmpty()) ? cpuBaseModel : cpuModel; }
+    public long getCpuKhz() { return cpuKhz; }
     public int[] getCpuCorePcts() { return cpuCorePcts; }
     public int getCpuCoreCount() { return cpuCorePcts != null ? cpuCorePcts.length : 0; }
     public float getRamUsedGb() { return ramUsedGb; }
@@ -197,7 +266,11 @@ public class PcStats {
     public float getVramUsedGb() { return vramUsedGb; }
     public float getVramTotalGb() { return vramTotalGb; }
     public int getVramPct() { return vramPct; }
+    public float getGpuMemGhz() { return gpuMemGhz; }
+    public long getGpuMemKhz() { return gpuMemKhz; }
+    public long getGpuCoreKhz() { return gpuCoreKhz; }
     public String getGpuName() { return gpuName; }
+    public String getGpuBaseName() { return (gpuBaseName != null && !gpuBaseName.isEmpty()) ? gpuBaseName : gpuName; }
     public float getNetDownKbps() { return netDownKbps; }
     public float getNetUpKbps() { return netUpKbps; }
     public String getNetIp() { return netIp; }
@@ -210,4 +283,99 @@ public class PcStats {
     public int getGameFps() { return gameFps; }
     public boolean isGameRunning() { return gameFps > 0 || (gameName != null && !gameName.isEmpty() && !gameName.equalsIgnoreCase("No Game")); }
     public long getTimestamp() { return timestamp; }
+
+    /**
+     * Smooths metrics across a 3-packet buffer to filter out single-frame jitter
+     * while preserving the latest metadata (names, IPs, temps).
+     */
+    public static PcStats smoothFromBuffer(PcStats[] buffer, int count) {
+        if (buffer == null || count <= 0) return null;
+        if (count == 1) return buffer[0];
+
+        PcStats latest = buffer[count - 1];
+        if (latest == null) return null;
+
+        PcStats s = new PcStats();
+        s.cpuModel = latest.cpuModel;
+        s.cpuBaseModel = latest.cpuBaseModel;
+        s.gpuName = latest.gpuName;
+        s.gpuBaseName = latest.gpuBaseName;
+        s.cpuTemp = latest.cpuTemp;
+        s.gpuTemp = latest.gpuTemp;
+        s.netIp = latest.netIp;
+        s.netMac = latest.netMac;
+        s.netLink = latest.netLink;
+        s.gameName = latest.gameName;
+        s.diskUsedGb = latest.diskUsedGb;
+        s.diskTotalGb = latest.diskTotalGb;
+        s.diskPct = latest.diskPct;
+        s.ramUsedGb = latest.ramUsedGb;
+        s.ramTotalGb = latest.ramTotalGb;
+        s.ramPct = latest.ramPct;
+        s.vramTotalGb = latest.vramTotalGb;
+        s.timestamp = System.currentTimeMillis();
+
+        float totalCpuPct = 0;
+        float totalGpuPct = 0;
+        float totalVramPct = 0;
+        float totalVramUsed = 0;
+        long totalCpuKhz = 0;
+        long totalGpuCoreKhz = 0;
+        long totalGpuMemKhz = 0;
+        float totalNetDown = 0;
+        float totalNetUp = 0;
+        int fpsSum = 0;
+        int fpsCount = 0;
+
+        int coreCount = latest.getCpuCoreCount();
+        float[] coreSums = (coreCount > 0) ? new float[coreCount] : null;
+
+        int validCount = 0;
+        for (int i = 0; i < count; i++) {
+            PcStats p = buffer[i];
+            if (p == null) continue;
+            validCount++;
+            totalCpuPct += p.cpuPct;
+            totalGpuPct += p.gpuPct;
+            totalVramPct += p.vramPct;
+            totalVramUsed += p.vramUsedGb;
+            totalCpuKhz += p.cpuKhz;
+            totalGpuCoreKhz += p.gpuCoreKhz;
+            totalGpuMemKhz += p.gpuMemKhz;
+            totalNetDown += p.netDownKbps;
+            totalNetUp += p.netUpKbps;
+            if (p.gameFps > 0) {
+                fpsSum += p.gameFps;
+                fpsCount++;
+            }
+            if (coreSums != null && p.cpuCorePcts != null) {
+                for (int c = 0; c < coreCount && c < p.cpuCorePcts.length; c++) {
+                    coreSums[c] += p.cpuCorePcts[c];
+                }
+            }
+        }
+
+        if (validCount == 0) return latest;
+
+        s.cpuPct = clampPct(Math.round(totalCpuPct / validCount));
+        s.gpuPct = clampPct(Math.round(totalGpuPct / validCount));
+        s.vramPct = clampPct(Math.round(totalVramPct / validCount));
+        s.vramUsedGb = totalVramUsed / validCount;
+        s.cpuKhz = totalCpuKhz / validCount;
+        s.gpuCoreKhz = totalGpuCoreKhz / validCount;
+        s.gpuMemKhz = totalGpuMemKhz / validCount;
+        s.gpuMemGhz = s.gpuMemKhz / 1_000_000f;
+        s.netDownKbps = totalNetDown / validCount;
+        s.netUpKbps = totalNetUp / validCount;
+        s.gameFps = (fpsCount > 0) ? Math.round((float) fpsSum / fpsCount) : latest.gameFps;
+
+        if (coreSums != null) {
+            s.cpuCorePcts = new int[coreCount];
+            for (int c = 0; c < coreCount; c++) {
+                s.cpuCorePcts[c] = clampPct(Math.round(coreSums[c] / validCount));
+            }
+        }
+
+        return s;
+    }
 }

@@ -25,7 +25,7 @@ import java.io.FileWriter;
 public class SettingsFragment extends Fragment {
 
     private SharedPreferences prefs;
-    private TextView portValue, sampleRateValue, latencyValue, backendValue, orientationValue;
+    private TextView portValue, sampleRateValue, latencyValue, backendValue, orientationValue, statsRateValue;
     private Switch switchAutostart;
 
     @Nullable
@@ -48,6 +48,7 @@ public class SettingsFragment extends Fragment {
         latencyValue = view.findViewById(R.id.setting_latency_value);
         backendValue = view.findViewById(R.id.setting_backend_value);
         orientationValue = view.findViewById(R.id.setting_orientation_value);
+        statsRateValue = view.findViewById(R.id.setting_stats_rate_value);
         switchAutostart = view.findViewById(R.id.switch_autostart);
 
         refreshValues();
@@ -190,6 +191,49 @@ public class SettingsFragment extends Fragment {
             });
         }
 
+        // PC Stats Telemetry Refresh Rate setting
+        View settingStatsRate = view.findViewById(R.id.setting_stats_rate);
+        if (settingStatsRate != null) {
+            settingStatsRate.setOnClickListener(v -> {
+                Context c = getContext();
+                if (c == null || prefs == null) return;
+
+                final String[] options = {
+                        "Call Mode (On-Demand / App Driven)",
+                        "0 ms (Uncapped - Fast as Possible)",
+                        "50 ms (20 Hz - Ultra Smooth)",
+                        "100 ms (10 Hz - Smooth Gaming)",
+                        "0.25s (4 Hz - Fast)",
+                        "0.5s (2 Hz - Balanced)",
+                        "1.0s (1 Hz - Standard / Default)",
+                        "2.0s (0.5 Hz - Low CPU)",
+                        "3.0s (0.33 Hz - Power Saver)"
+                };
+                final float[] values = {-1.0f, 0.0f, 0.05f, 0.10f, 0.25f, 0.5f, 1.0f, 2.0f, 3.0f};
+                float current = prefs.getFloat("stats_refresh_interval", -1.0f);
+                int selected = 0; // Default to Call Mode
+                for (int i = 0; i < values.length; i++) {
+                    if (Math.abs(values[i] - current) < 0.02f) {
+                        selected = i;
+                        break;
+                    }
+                }
+
+                new AlertDialog.Builder(c)
+                        .setTitle("Telemetry Update Frequency")
+                        .setSingleChoiceItems(options, selected, (dialog, which) -> {
+                            float chosen = values[which];
+                            prefs.edit().putFloat("stats_refresh_interval", chosen).apply();
+                            com.audioarch.launcher.utils.PcStatsServer.getInstance().setIntervalSec(chosen);
+                            refreshValues();
+                            dialog.dismiss();
+                            Toast.makeText(c, "Stats rate set to " + options[which], Toast.LENGTH_SHORT).show();
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            });
+        }
+
         // About Section version setup
         TextView settingAboutVersion = view.findViewById(R.id.setting_about_version);
         if (settingAboutVersion != null) {
@@ -273,6 +317,31 @@ public class SettingsFragment extends Fragment {
                 default:
                     orientationValue.setText(R.string.orientation_portrait);
                     break;
+            }
+        }
+
+        if (statsRateValue != null) {
+            float interval = prefs.getFloat("stats_refresh_interval", -1.0f);
+            if (interval < 0) {
+                statsRateValue.setText("Call Mode (On-Demand / App Driven)");
+            } else if (interval <= 0.01f) {
+                statsRateValue.setText("0 ms (Uncapped - Fast as Possible)");
+            } else if (Math.abs(interval - 0.05f) < 0.02f) {
+                statsRateValue.setText("50 ms (20 Hz - Ultra Smooth)");
+            } else if (Math.abs(interval - 0.10f) < 0.03f) {
+                statsRateValue.setText("100 ms (10 Hz - Smooth Gaming)");
+            } else if (Math.abs(interval - 0.25f) < 0.05f) {
+                statsRateValue.setText("0.25s (4 Hz - Fast)");
+            } else if (Math.abs(interval - 0.5f) < 0.05f) {
+                statsRateValue.setText("0.5s (2 Hz - Balanced)");
+            } else if (Math.abs(interval - 1.0f) < 0.05f) {
+                statsRateValue.setText("1.0s (1 Hz - Standard)");
+            } else if (Math.abs(interval - 2.0f) < 0.05f) {
+                statsRateValue.setText("2.0s (0.5 Hz - Low CPU)");
+            } else if (Math.abs(interval - 3.0f) < 0.05f) {
+                statsRateValue.setText("3.0s (0.33 Hz - Power Saver)");
+            } else {
+                statsRateValue.setText(String.format(java.util.Locale.US, "%.2fs (%.1f Hz)", interval, (1.0f / interval)));
             }
         }
     }

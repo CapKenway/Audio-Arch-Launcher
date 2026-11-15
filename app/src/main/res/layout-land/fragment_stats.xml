@@ -40,7 +40,13 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:layout_marginEnd="8dp">
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:layout_marginEnd="6dp">
 
             <View
                 android:id="@+id/dot_pc_status"
@@ -54,6 +60,8 @@
                 android:layout_height="wrap_content"
                 android:text="@string/stat_waiting_pc"
                 android:textSize="10sp"
+                android:singleLine="true"
+                android:ellipsize="end"
                 android:textColor="@color/textSecondary"
                 android:layout_marginStart="4dp" />
         </LinearLayout>
@@ -289,7 +297,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="0.0 / 0.0 GB"
-                            android:textSize="10sp"
+                            android:textSize="9.5sp"
                             android:textColor="@color/textSecondary"
                             android:layout_marginStart="4dp"
                             android:singleLine="true"
@@ -320,7 +328,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="GPU Loading\u2026"
-                        android:textSize="11sp"
+                        android:textSize="10sp"
                         android:textColor="#E0E0E0"
                         android:layout_marginTop="2dp"
                         android:singleLine="true"
