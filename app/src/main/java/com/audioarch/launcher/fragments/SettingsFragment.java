@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.InputType;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -199,34 +200,66 @@ public class SettingsFragment extends Fragment {
                 if (c == null || prefs == null) return;
 
                 final String[] options = {
-                        "Call Mode (On-Demand / App Driven)",
-                        "0 ms (Uncapped - Fast as Possible)",
-                        "50 ms (20 Hz - Ultra Smooth)",
-                        "100 ms (10 Hz - Smooth Gaming)",
-                        "0.25s (4 Hz - Fast)",
-                        "0.5s (2 Hz - Balanced)",
-                        "1.0s (1 Hz - Standard / Default)",
-                        "2.0s (0.5 Hz - Low CPU)",
-                        "3.0s (0.33 Hz - Power Saver)"
+                        "Call: 50 ms (20 Hz - Ultra Smooth)",
+                        "Call: 80 ms (12.5 Hz - Balanced)",
+                        "Call: 100 ms (10 Hz - Rock Solid)",
+                        "Call: 250 ms (4 Hz - Fast)",
+                        "Call: 500 ms (2 Hz - Balanced)",
+                        "Call: 1.0s (1 Hz - Low CPU)",
+                        "Call: Custom (ms)...",
+                        "Stream: 0 ms (Uncapped - Fast as Possible)",
+                        "Stream: 50 ms (20 Hz - Ultra Smooth)",
+                        "Stream: 100 ms (10 Hz - Smooth Gaming)",
+                        "Stream: 0.25s (4 Hz - Fast)",
+                        "Stream: 0.5s (2 Hz - Balanced)",
+                        "Stream: 1.0s (1 Hz - Standard / Default)",
+                        "Stream: 2.0s (0.5 Hz - Power Saver)"
                 };
-                final float[] values = {-1.0f, 0.0f, 0.05f, 0.10f, 0.25f, 0.5f, 1.0f, 2.0f, 3.0f};
-                float current = prefs.getFloat("stats_refresh_interval", -1.0f);
-                int selected = 0; // Default to Call Mode
+                final float[] values = {
+                        -0.05f,
+                        -0.08f,
+                        -0.10f,
+                        -0.25f,
+                        -0.50f,
+                        -1.00f,
+                        -999.0f,
+                        0.0f,
+                        0.05f,
+                        0.10f,
+                        0.25f,
+                        0.50f,
+                        1.00f,
+                        2.00f
+                };
+                float current = prefs.getFloat("stats_refresh_interval", -0.05f);
+                if (current == -1.0f) {
+                    current = -0.05f;
+                    prefs.edit().putFloat("stats_refresh_interval", -0.05f).apply();
+                }
+                int selected = 0;
                 for (int i = 0; i < values.length; i++) {
+                    if (values[i] == -999.0f) continue;
                     if (Math.abs(values[i] - current) < 0.02f) {
                         selected = i;
                         break;
                     }
                 }
+                if (current < 0 && selected == 0 && Math.abs(values[0] - current) >= 0.02f) {
+                    selected = 6;
+                }
 
                 new AlertDialog.Builder(c)
                         .setTitle("Telemetry Update Frequency")
                         .setSingleChoiceItems(options, selected, (dialog, which) -> {
+                            dialog.dismiss();
                             float chosen = values[which];
+                            if (chosen == -999.0f) {
+                                showCustomCallDialog(c);
+                                return;
+                            }
                             prefs.edit().putFloat("stats_refresh_interval", chosen).apply();
                             com.audioarch.launcher.utils.PcStatsServer.getInstance().setIntervalSec(chosen);
                             refreshValues();
-                            dialog.dismiss();
                             Toast.makeText(c, "Stats rate set to " + options[which], Toast.LENGTH_SHORT).show();
                         })
                         .setNegativeButton("Cancel", null)
@@ -321,29 +354,77 @@ public class SettingsFragment extends Fragment {
         }
 
         if (statsRateValue != null) {
-            float interval = prefs.getFloat("stats_refresh_interval", -1.0f);
+            float interval = prefs.getFloat("stats_refresh_interval", -0.05f);
+            if (interval == -1.0f) {
+                interval = -0.05f;
+                prefs.edit().putFloat("stats_refresh_interval", -0.05f).apply();
+            }
             if (interval < 0) {
-                statsRateValue.setText("Call Mode (On-Demand / App Driven)");
+                long ms = Math.round(Math.abs(interval) * 1000f);
+                if (ms == 50) {
+                    statsRateValue.setText("Call: 50 ms (20 Hz - Ultra Smooth)");
+                } else if (ms == 80) {
+                    statsRateValue.setText("Call: 80 ms (12.5 Hz - Balanced)");
+                } else if (ms == 100) {
+                    statsRateValue.setText("Call: 100 ms (10 Hz - Rock Solid)");
+                } else if (ms == 250) {
+                    statsRateValue.setText("Call: 250 ms (4 Hz - Fast)");
+                } else if (ms == 500) {
+                    statsRateValue.setText("Call: 500 ms (2 Hz - Balanced)");
+                } else if (ms == 1000) {
+                    statsRateValue.setText("Call: 1.0s (1 Hz - Low CPU)");
+                } else {
+                    statsRateValue.setText("Call: " + ms + " ms (Custom)");
+                }
             } else if (interval <= 0.01f) {
-                statsRateValue.setText("0 ms (Uncapped - Fast as Possible)");
+                statsRateValue.setText("Stream: 0 ms (Uncapped - Fast as Possible)");
             } else if (Math.abs(interval - 0.05f) < 0.02f) {
-                statsRateValue.setText("50 ms (20 Hz - Ultra Smooth)");
+                statsRateValue.setText("Stream: 50 ms (20 Hz - Ultra Smooth)");
             } else if (Math.abs(interval - 0.10f) < 0.03f) {
-                statsRateValue.setText("100 ms (10 Hz - Smooth Gaming)");
+                statsRateValue.setText("Stream: 100 ms (10 Hz - Smooth Gaming)");
             } else if (Math.abs(interval - 0.25f) < 0.05f) {
-                statsRateValue.setText("0.25s (4 Hz - Fast)");
+                statsRateValue.setText("Stream: 0.25s (4 Hz - Fast)");
             } else if (Math.abs(interval - 0.5f) < 0.05f) {
-                statsRateValue.setText("0.5s (2 Hz - Balanced)");
+                statsRateValue.setText("Stream: 0.5s (2 Hz - Balanced)");
             } else if (Math.abs(interval - 1.0f) < 0.05f) {
-                statsRateValue.setText("1.0s (1 Hz - Standard)");
+                statsRateValue.setText("Stream: 1.0s (1 Hz - Standard / Default)");
             } else if (Math.abs(interval - 2.0f) < 0.05f) {
-                statsRateValue.setText("2.0s (0.5 Hz - Low CPU)");
-            } else if (Math.abs(interval - 3.0f) < 0.05f) {
-                statsRateValue.setText("3.0s (0.33 Hz - Power Saver)");
+                statsRateValue.setText("Stream: 2.0s (0.5 Hz - Power Saver)");
             } else {
-                statsRateValue.setText(String.format(java.util.Locale.US, "%.2fs (%.1f Hz)", interval, (1.0f / interval)));
+                statsRateValue.setText(String.format(java.util.Locale.US, "Stream: %.2fs (%.1f Hz)", interval, (1.0f / interval)));
             }
         }
+    }
+
+    private void showCustomCallDialog(Context c) {
+        if (prefs == null) return;
+        final EditText input = new EditText(c);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        long currentMs = Math.round(Math.abs(prefs.getFloat("stats_refresh_interval", -0.05f)) * 1000f);
+        if (currentMs < 20 || currentMs > 10000) currentMs = 50;
+        input.setText(String.valueOf(currentMs));
+        input.setSelection(input.getText().length());
+
+        new AlertDialog.Builder(c)
+                .setTitle("Custom Call Interval (ms)")
+                .setMessage("Enter polling interval in milliseconds (20 - 5000 ms).\nPhone will request packets at this exact cadence.")
+                .setView(input)
+                .setPositiveButton("Set", (dialog, which) -> {
+                    String valStr = input.getText().toString().trim();
+                    try {
+                        int valMs = Integer.parseInt(valStr);
+                        valMs = Math.max(20, Math.min(10000, valMs));
+                        float chosen = -(valMs / 1000.0f);
+                        prefs.edit().putFloat("stats_refresh_interval", chosen).apply();
+                        com.audioarch.launcher.utils.PcStatsServer.getInstance().setIntervalSec(chosen);
+                        refreshValues();
+                        Toast.makeText(c, "Call Mode set to " + valMs + " ms (" + String.format(java.util.Locale.US, "%.1f", 1000f / valMs) + " Hz)", Toast.LENGTH_SHORT).show();
+                    } catch (Throwable t) {
+                        Toast.makeText(c, "Invalid number", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void showEditDialog(String title, final String key, String currentValue) {

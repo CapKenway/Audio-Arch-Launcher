@@ -43,8 +43,8 @@ public class PcStatsServer {
     private volatile boolean isConnected = false;
     private volatile PcStats lastStats = null;
     private int currentPort = DEFAULT_PORT;
-    private volatile float currentIntervalSec = 0.0f;
-    private volatile float measuredRateHz = 1.0f;
+    private volatile float currentIntervalSec = -0.05f;
+    private volatile float measuredRateHz = 20.0f;
     private long lastPacketTime = 0;
     private volatile OutputStream activeOut = null;
 
@@ -111,12 +111,14 @@ public class PcStatsServer {
 
     public void setIntervalSec(float intervalSec) {
         if (intervalSec < 0) {
-            this.currentIntervalSec = -1.0f;
-            this.measuredRateHz = 12.0f;
+            this.currentIntervalSec = intervalSec;
+            this.measuredRateHz = 1.0f / Math.abs(intervalSec);
         } else {
             this.currentIntervalSec = Math.max(0.0f, Math.min(10.0f, intervalSec));
             if (this.currentIntervalSec > 0.01f) {
                 this.measuredRateHz = 1.0f / this.currentIntervalSec;
+            } else {
+                this.measuredRateHz = 40.0f;
             }
         }
         sendRateToClient(this.currentIntervalSec);
@@ -124,6 +126,14 @@ public class PcStatsServer {
 
     public boolean isCallMode() {
         return currentIntervalSec < 0;
+    }
+
+    public long getCallIntervalMs() {
+        if (currentIntervalSec < 0) {
+            long ms = Math.round(Math.abs(currentIntervalSec) * 1000f);
+            return Math.max(20, ms);
+        }
+        return 50;
     }
 
     public float getIntervalSec() {
@@ -153,7 +163,8 @@ public class PcStatsServer {
                 try {
                     String msg;
                     if (intervalSec < 0) {
-                        msg = "MODE CALL\n";
+                        long ms = Math.round(Math.abs(intervalSec) * 1000f);
+                        msg = "MODE CALL " + ms + "\n";
                     } else if (intervalSec <= 0.01f) {
                         msg = "MODE STREAM\nRATE 0.0\n";
                     } else {
@@ -182,7 +193,7 @@ public class PcStatsServer {
                     try {
                         client = serverSocket.accept();
                         client.setTcpNoDelay(true);
-                        int soTimeout = Math.max(6000, (int) (currentIntervalSec * 3500));
+                        int soTimeout = Math.max(6000, (int) (Math.abs(currentIntervalSec) * 3500));
                         client.setSoTimeout(soTimeout);
                         activeOut = client.getOutputStream();
                         setConnected(true);

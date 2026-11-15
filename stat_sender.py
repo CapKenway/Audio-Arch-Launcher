@@ -1085,7 +1085,11 @@ def run_telemetry_loop(host="127.0.0.1", port=STATS_PORT, interval=None):
                             sock.sendall(packet.encode("utf-8"))
                         elif line.startswith("MODE CALL") or line == "CALL":
                             mode_call = True
-                            log_info("Switched to Call / On-Demand mode: phone asks for packets")
+                            call_arg = line.replace("MODE CALL", "").replace("CALL", "").strip()
+                            if call_arg:
+                                log_info(f"Switched to Call / On-Demand mode: phone requests packets every {call_arg}ms")
+                            else:
+                                log_info("Switched to Call / On-Demand mode: phone asks for packets")
                         elif line.startswith("MODE STREAM") or line == "STREAM":
                             mode_call = False
                             log_info("Switched to Stream mode: PC pushes packets")

@@ -6,11 +6,13 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.InputType;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -131,8 +133,15 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
         dotPcStatus = view.findViewById(R.id.dot_pc_status);
         tvPcStatus = view.findViewById(R.id.tv_pc_status);
         containerPcStatus = view.findViewById(R.id.container_pc_status);
+        View.OnClickListener rateClick = v -> showRateSelectionDialog();
         if (containerPcStatus != null) {
-            containerPcStatus.setOnClickListener(v -> showRateSelectionDialog());
+            containerPcStatus.setOnClickListener(rateClick);
+        }
+        if (tvPcStatus != null) {
+            tvPcStatus.setOnClickListener(rateClick);
+        }
+        if (dotPcStatus != null) {
+            dotPcStatus.setOnClickListener(rateClick);
         }
         dotDaemonPill = view.findViewById(R.id.dot_daemon_pill);
         tvDaemonPill = view.findViewById(R.id.tv_daemon_pill);
@@ -201,9 +210,13 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
         if (ctx != null) {
             daemonController = new DaemonController();
             prefs = ctx.getSharedPreferences("audioarch_prefs", Context.MODE_PRIVATE);
-            float prefInterval = prefs.getFloat("stats_refresh_interval", 1.0f);
+            float prefInterval = prefs.getFloat("stats_refresh_interval", -0.05f);
+            if (prefInterval == -1.0f) {
+                prefInterval = -0.05f;
+                prefs.edit().putFloat("stats_refresh_interval", -0.05f).apply();
+            }
             PcStatsServer.getInstance().setIntervalSec(prefInterval);
-            measuredRateHz = 1.0f / prefInterval;
+            measuredRateHz = 1.0f / Math.abs(prefInterval);
         }
 
         // Ensure stats server is running
@@ -270,9 +283,12 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
         @Override
         public void run() {
             if (!isVisibleToUser || !isAdded()) return;
-            if (PcStatsServer.getInstance().isCallMode() && PcStatsServer.getInstance().isConnected()) {
-                PcStatsServer.getInstance().requestPacket();
-                handler.postDelayed(this, 80); // ~12.5 Hz smooth request cadence
+            if (PcStatsServer.getInstance().isCallMode()) {
+                if (PcStatsServer.getInstance().isConnected()) {
+                    PcStatsServer.getInstance().requestPacket();
+                }
+                long delayMs = PcStatsServer.getInstance().getCallIntervalMs();
+                handler.postDelayed(this, Math.max(20, delayMs));
             }
         }
     };
@@ -309,7 +325,8 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
 
     private String getFormattedRate() {
         if (PcStatsServer.getInstance().isCallMode()) {
-            return String.format(Locale.US, "Call %.0f Hz", measuredRateHz);
+            long ms = PcStatsServer.getInstance().getCallIntervalMs();
+            return String.format(Locale.US, "Call %dms", ms);
         } else if (measuredRateHz >= 100f) {
             return String.format(Locale.US, "%.0f Hz (Max)", measuredRateHz);
         } else if (measuredRateHz >= 40f) {
@@ -340,30 +357,63 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
         if (c == null) return;
         final SharedPreferences p = c.getSharedPreferences("audioarch_prefs", Context.MODE_PRIVATE);
         final String[] options = {
-                "Call Mode (On-Demand / App Driven)",
-                "0 ms (Uncapped - Fast as Possible)",
-                "50 ms (20 Hz - Ultra Smooth)",
-                "100 ms (10 Hz - Smooth Gaming)",
-                "0.25s (4 Hz - Fast)",
-                "0.5s (2 Hz - Balanced)",
-                "1.0s (1 Hz - Standard / Default)",
-                "2.0s (0.5 Hz - Low CPU)",
-                "3.0s (0.33 Hz - Power Saver)"
+                "Call: 50 ms (20 Hz - Ultra Smooth)",
+                "Call: 80 ms (12.5 Hz - Balanced)",
+                "Call: 100 ms (10 Hz - Rock Solid)",
+                "Call: 250 ms (4 Hz - Fast)",
+                "Call: 500 ms (2 Hz - Balanced)",
+                "Call: 1.0s (1 Hz - Low CPU)",
+                "Call: Custom (ms)...",
+                "Stream: 0 ms (Uncapped - Fast as Possible)",
+                "Stream: 50 ms (20 Hz - Ultra Smooth)",
+                "Stream: 100 ms (10 Hz - Smooth Gaming)",
+                "Stream: 0.25s (4 Hz - Fast)",
+                "Stream: 0.5s (2 Hz - Balanced)",
+                "Stream: 1.0s (1 Hz - Standard / Default)",
+                "Stream: 2.0s (0.5 Hz - Power Saver)"
         };
-        final float[] values = {-1.0f, 0.0f, 0.05f, 0.10f, 0.25f, 0.5f, 1.0f, 2.0f, 3.0f};
-        float current = p.getFloat("stats_refresh_interval", -1.0f);
+        final float[] values = {
+                -0.05f,
+                -0.08f,
+                -0.10f,
+                -0.25f,
+                -0.50f,
+                -1.00f,
+                -999.0f,
+                0.0f,
+                0.05f,
+                0.10f,
+                0.25f,
+                0.50f,
+                1.00f,
+                2.00f
+        };
+        float current = p.getFloat("stats_refresh_interval", -0.05f);
+        if (current == -1.0f) {
+            current = -0.05f;
+            p.edit().putFloat("stats_refresh_interval", -0.05f).apply();
+        }
         int selected = 0;
         for (int i = 0; i < values.length; i++) {
+            if (values[i] == -999.0f) continue;
             if (Math.abs(values[i] - current) < 0.02f) {
                 selected = i;
                 break;
             }
         }
+        if (current < 0 && selected == 0 && Math.abs(values[0] - current) >= 0.02f) {
+            selected = 6;
+        }
 
         new AlertDialog.Builder(c)
                 .setTitle("Telemetry Update Frequency")
                 .setSingleChoiceItems(options, selected, (dialog, which) -> {
+                    dialog.dismiss();
                     float chosen = values[which];
+                    if (chosen == -999.0f) {
+                        showCustomCallDialog(c, p);
+                        return;
+                    }
                     p.edit().putFloat("stats_refresh_interval", chosen).apply();
                     PcStatsServer.getInstance().setIntervalSec(chosen);
                     measuredRateHz = PcStatsServer.getInstance().getMeasuredRateHz();
@@ -372,8 +422,40 @@ public class StatsFragment extends Fragment implements PcStatsServer.Listener {
                         handler.post(pollPacketRunnable);
                     }
                     updateConnectionUi(PcStatsServer.getInstance().isConnected());
-                    dialog.dismiss();
                     Toast.makeText(c, "Stats rate set to " + options[which], Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showCustomCallDialog(Context c, SharedPreferences p) {
+        final EditText input = new EditText(c);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        long currentMs = Math.round(Math.abs(p.getFloat("stats_refresh_interval", -0.05f)) * 1000f);
+        if (currentMs < 20 || currentMs > 10000) currentMs = 50;
+        input.setText(String.valueOf(currentMs));
+        input.setSelection(input.getText().length());
+
+        new AlertDialog.Builder(c)
+                .setTitle("Custom Call Interval (ms)")
+                .setMessage("Enter polling interval in milliseconds (20 - 5000 ms).\nPhone will request packets at this exact cadence.")
+                .setView(input)
+                .setPositiveButton("Set", (dialog, which) -> {
+                    String valStr = input.getText().toString().trim();
+                    try {
+                        int valMs = Integer.parseInt(valStr);
+                        valMs = Math.max(20, Math.min(10000, valMs));
+                        float chosen = -(valMs / 1000.0f);
+                        p.edit().putFloat("stats_refresh_interval", chosen).apply();
+                        PcStatsServer.getInstance().setIntervalSec(chosen);
+                        measuredRateHz = PcStatsServer.getInstance().getMeasuredRateHz();
+                        handler.removeCallbacks(pollPacketRunnable);
+                        handler.post(pollPacketRunnable);
+                        updateConnectionUi(PcStatsServer.getInstance().isConnected());
+                        Toast.makeText(c, "Call Mode set to " + valMs + " ms (" + String.format(Locale.US, "%.1f", 1000f / valMs) + " Hz)", Toast.LENGTH_SHORT).show();
+                    } catch (Throwable t) {
+                        Toast.makeText(c, "Invalid number", Toast.LENGTH_SHORT).show();
+                    }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
